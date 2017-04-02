@@ -1,0 +1,5 @@
+[requires]
+glm/0.9.7.6@dlarudgus20/stable
+
+[generators]
+cmake
