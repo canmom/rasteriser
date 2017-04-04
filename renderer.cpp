@@ -88,8 +88,23 @@ void z_divide_all(const vector<vec4>& clip_vertices, vector<vec3>& ndc_vertices)
     std::transform(clip_vertices.begin(),clip_vertices.end(),ndc_vertices.begin(),z_divide);
 }
 
-vec2 print_display_coords(const vec3& ndc_vertex, const float& display_width, const float& display_height) {
-    cout << 0.5f*(ndc_vertex.x+1.0f) * display_width << ',' << 0.5f*(ndc_vertex.y+1.0f) * display_height << '\n'; 
+vec2 xy(const vec3& v) {
+    return vec2(v.x,v.y);
+}
+
+float edge(const vec2& point, const vec3& vert1, const vec3& vert2) {
+    return (vert2.x-vert1.x)*(point.y-vert1.y) - (vert2.y - vert1.y) * (point.x - vert1.x);
+}
+
+vec3 barycentric(const vec2& point, const vec3& vert0, const vec3& vert1, const vec3& vert2) {
+    float area = edge(xy(vert2), vert0, vert1);
+    vec3 bary(0.0f);
+
+    bary.x = edge(point,vert0,vert1)/area;
+    bary.y = edge(point,vert1,vert2)/area;
+    bary.z = edge(point,vert2,vert0)/area;
+
+    return bary;
 }
 
 int main() {
@@ -106,9 +121,13 @@ int main() {
 
     z_divide_all(clip_vertices, ndc_vertices);
 
-    auto print_169 = std::bind(print_display_coords,_1,16.f,9.f);
+    vec2 test_point(-0.1,-0.1);
 
-    std::for_each(ndc_vertices.begin(),ndc_vertices.end(),print_169);
+    vec3 bary = barycentric(test_point,ndc_vertices[0],ndc_vertices[1],ndc_vertices[2]);
+
+    print_vec3(bary);
+
+    cout << bary.x + bary.y + bary.z;
 
     return 0;
 }
