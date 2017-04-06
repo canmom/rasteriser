@@ -2,7 +2,7 @@
 
 An implementation of the rasterisation algorithm for drawing 3D triangles using OpenGL-imitation maths.
 
-This is a self-learning project intended to teach me how an Open-GL style renderer works behind the scenes. It is fairly closely based on the approach described at [Scratchapixel](https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/overview-rasterization-algorithm), but with some modifications to use the OpenGL perspective projection matrix. A log of development can be found [http://canonicalmomentum.tumblr.com/tagged/building-my-own-rasteriser/chrono](here).
+This is a self-learning project intended to teach me how an Open-GL style renderer works behind the scenes. It is fairly closely based on the approach described at [Scratchapixel](https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/overview-rasterization-algorithm), but with some modifications to use the OpenGL perspective projection matrix. A log of development can be found [here](http://canonicalmomentum.tumblr.com/tagged/building-my-own-rasteriser/chrono).
 
 ## Third party code
 
