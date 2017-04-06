@@ -15,12 +15,12 @@ Needed for compilation:
 Needed to run:
 - [ImageMagick](http://imagemagick.org/script/index.php) or [GraphicsMagick](http://imagemagick.org/script/index.php) to allow CImg to output PNG files.
 
-## Building the project
+## Building
 
 1. Create a `build` folder inside the project folder.
 2. In the build folder, run `conan install ..` to install GLM via Conan, and produce a CMake file.
 3. Run `cmake ..` to produce build files appropriate to your build system (e.g. a makefile for GCC).
 4. Compile according to your system (e.g. with `make` for gcc, or `ming32-make` for MinGW-GCC).
 
-##Using the project
+## Use
 For now, there are no command-line parameters or file input. Running the binary file will produce two images, 'frame.png' containing the rendered output, and 'depth.png' containing the (normalised) depth buffer.
