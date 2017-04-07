@@ -10,6 +10,7 @@ Includes the [CImg](http://cimg.eu/) library. The license is contained in the ve
 
 Needed for compilation:
 - [OpenGL Mathematics (GLM)](https://github.com/g-truc/glm), which should be installed using [Conan](https://www.conan.io/) as described below.
+- [Templatized C++ Command Line Parser Library (TCLAP)](http://tclap.sourceforge.net/), which should be installed using Conan.
 - [CMake](https://cmake.org/).
 
 Needed to run:
@@ -18,9 +19,13 @@ Needed to run:
 ## Building
 
 1. Create a `build` folder inside the project folder.
-2. In the build folder, run `conan install ..` to install GLM via Conan, and produce a CMake file.
+2. In the build folder, run `conan install .. --build TCLAP` to install GLM and TCLAP via Conan, and produce a CMake file.
 3. Run `cmake ..` to produce build files appropriate to your build system (e.g. a makefile for GCC).
 4. Compile according to your system (e.g. with `make` for gcc, or `ming32-make` for MinGW-GCC).
 
 ## Use
-For now, there are no command-line parameters or file input. Running the binary file will produce two images, 'frame.png' containing the rendered output, and 'depth.png' containing the (normalised) depth buffer.
+Run the executable from the command line. Flags available:
+- `-h`/`--help`: display help
+- `-a`/`--angle`: rotation about the y axis (radians)
+- `-x`/`--width`: width of the output image (pixels)
+- `-y`/`--height`: height of the output image (pixels)

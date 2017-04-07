@@ -2,16 +2,20 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
-
+#include <string>
+//glm core libraries:
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <glm/mat4x4.hpp>
-
+//glm extended libraries:
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/extented_min_max.hpp>
-
+//libraries in local vendor folder:
 #include "./vendor/cimg/CImg.h"
+//#include "./vendor/tinyobjloader/tiny_obj_loader.h"
+//TCLAP
+#include <tclap/CmdLine.h>
 
 using std::vector;
 using std::cout;
@@ -37,9 +41,13 @@ void add_square(vector<vec3> &vertices, vector<uvec3> &faces) {
     faces.push_back(uvec3(2,1,3));
 }
 
-mat4 camera_matrix(float angle) {
+// void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
+    
+// }
+
+mat4 camera_matrix(float angle,float aspect_ratio) {
     //compute the model-view-projection matrix for a camera rotated about the origin by angle radians
-    mat4 perspective = glm::perspective(glm::radians(45.0f),16.0f/9.0f,0.1f,3.f);
+    mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,3.f);
 
     mat4 view(1.0f);
     view = glm::translate(view, vec3(0.0f,0.0f,-1.5f));
@@ -189,10 +197,7 @@ void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height) {
     //draw all the pixels from a triangle to the frame and depth buffers
-    //take three indices into raster_vertices in face
-    //and pointers to the frame and depth buffers
-    //loop over all pixels inside bounding box of triangle
-    //call update_pixel on each one to update frame and depth buffers
+    //face should contain three indices into raster_vertices
 
     vec3 vert0 = raster_vertices[face.x];
     vec3 vert1 = raster_vertices[face.y];
@@ -203,54 +208,69 @@ void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices,
 
     bounding_box(top_left,bottom_right,vert0,vert1,vert2,image_width,image_height);
 
+    //loop over all pixels inside bounding box of triangle
+    //call update_pixel on each one to update frame and depth buffers
     for(unsigned int raster_y = top_left.y; raster_y <= bottom_right.y; raster_y++) {
         for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
             update_pixel(raster_x,raster_y, vert0,vert1,vert2, *frame_buffer,*depth_buffer);
-
         }
     }
 }
 
-int main() {
-    //define output width and height
-    unsigned int image_width = 540;
-    unsigned int image_height = 304;
+int main(int argc,char** argv) {
+    try {
+        TCLAP::CmdLine cmd("Render a model by rasterisation.", ' ', "0.1");
 
-    //define storage for vertices in various coordinate systems
-    vector<vec3> vertices;
-    vector<vec4> clip_vertices;
-    vector<vec3> ndc_vertices;
-    vector<vec3> raster_vertices;
+        TCLAP::ValueArg<float> angleArg("a","angle","Camera view angle",false,0.f,"radians",cmd);
+        TCLAP::ValueArg<unsigned int> widthArg("x","width","Width of output in pixels",false,540u,"pixels",cmd);
+        TCLAP::ValueArg<unsigned int> heightArg("y","height","Height of output in pixels",false,304u,"pixels",cmd);
+        
+        cmd.parse(argc,argv);
 
-    //define storage for faces (indices into vertices)
-    vector<uvec3> faces;
+        //define output width and height
+        unsigned int image_width = widthArg.getValue();
+        unsigned int image_height = heightArg.getValue();
+        float aspect_ratio = (float)image_width/(float)image_height;
+        float angle = angleArg.getValue();
 
-    //load dummy data
-    add_square(vertices,faces);
+        //define storage for vertices in various coordinate systems
+        vector<vec3> vertices;
+        vector<vec4> clip_vertices;
+        vector<vec3> ndc_vertices;
+        vector<vec3> raster_vertices;
 
-    //calculate camera matrix for a camera rotated by 1 radian
-    mat4 camera = camera_matrix(1.0f);
+        //define storage for faces (indices into vertices)
+        vector<uvec3> faces;
 
-    //transform vertices into clip space using camera matrix
-    transform_vertices(camera, vertices, clip_vertices);
+        //load dummy data
+        add_square(vertices,faces);
 
-    //transform vertices into Normalised Device Coordinates
-    z_divide_all(clip_vertices, ndc_vertices);
+        //calculate camera matrix for a camera rotated by 1 radian
+        mat4 camera = camera_matrix(angle,aspect_ratio);
 
-    //transform Normalised Device Coordinates to raster coordinates given our image
-    ndc_to_raster_all(image_width,image_height,ndc_vertices,raster_vertices);
+        //transform vertices into clip space using camera matrix
+        transform_vertices(camera, vertices, clip_vertices);
 
-    //instantiate buffers for storing pixel data
-    CImg<unsigned char> frame_buffer(image_width,image_height,1,3,0);
-    CImg<float> depth_buffer(image_width,image_height,1,1,1.f);
+        //transform vertices into Normalised Device Coordinates
+        z_divide_all(clip_vertices, ndc_vertices);
 
-    //for each face in faces, draw it to the frame and depth buffers
-    auto dt = std::bind(draw_triangle, _1, raster_vertices, &frame_buffer, &depth_buffer, image_width, image_height);
-    std::for_each(faces.begin(),faces.end(),dt);
+        //transform Normalised Device Coordinates to raster coordinates given our image
+        ndc_to_raster_all(image_width,image_height,ndc_vertices,raster_vertices);
 
-    //output frame and depth buffers
-    frame_buffer.save("frame.png");
-    depth_buffer.normalize(0,255).save("depth.png");
-    
-    return 0;
+        //instantiate buffers for storing pixel data
+        CImg<unsigned char> frame_buffer(image_width,image_height,1,3,0);
+        CImg<float> depth_buffer(image_width,image_height,1,1,1.f);
+
+        //for each face in faces, draw it to the frame and depth buffers
+        auto dt = std::bind(draw_triangle, _1, raster_vertices, &frame_buffer, &depth_buffer, image_width, image_height);
+        std::for_each(faces.begin(),faces.end(),dt);
+
+        //output frame and depth buffers
+        frame_buffer.save("frame.png");
+        depth_buffer.normalize(0,255).save("depth.png");
+        
+        return 0;
+
+    } catch (TCLAP::ArgException &e)  // catch any exceptions
+    { std::cerr << "Error: " << e.error() << " for arg " << e.argId() << std::endl; }
 }
