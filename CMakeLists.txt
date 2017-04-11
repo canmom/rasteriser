@@ -5,5 +5,5 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
 add_executable(renderer renderer.cpp)
-target_link_libraries(renderer ${CONAN_LIBS})
+target_link_libraries(renderer ${CONAN_LIBS} -lX11 -lpthread)
 target_compile_features(renderer PRIVATE cxx_range_for)
