@@ -1,3 +1,4 @@
+#define TINYOBJLOADER_IMPLEMENTATION
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -13,7 +14,7 @@
 #include <glm/gtx/extented_min_max.hpp>
 //libraries in local vendor folder:
 #include "./vendor/cimg/CImg.h"
-//#include "./vendor/tinyobjloader/tiny_obj_loader.h"
+#include "./vendor/tinyobjloader/tiny_obj_loader.h"
 //TCLAP
 #include <tclap/CmdLine.h>
 
@@ -41,26 +42,73 @@ void add_square(vector<vec3> &vertices, vector<uvec3> &faces) {
     faces.push_back(uvec3(2,1,3));
 }
 
-// void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
-    
-// }
+void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
+    //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
+
+    tinyobj::attrib_t attrib;
+    vector<tinyobj::shape_t> shapes;
+    vector<tinyobj::material_t> materials; //necessary for function call, but will be discarded
+    std::string err;
+
+    //load all data in Obj file
+    //'triangulate' option defaults to 'true' so all faces should be triangles
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, file.c_str());
+
+    //boilerplate error handling
+    if (!err.empty()) {
+        std::cerr << err << std::endl;
+    }
+    if (!success) {
+        exit(1);
+    }
+
+    //convert the vertices into our format
+    for(size_t vert = 0; vert < attrib.vertices.size()-2; vert+=3) {
+        vertices.push_back(
+            vec3(attrib.vertices[vert],
+                attrib.vertices[vert+1],
+                attrib.vertices[vert+2]
+            ));
+    }
+
+    //convert the faces into our format
+    //faces should all be triangles due to triangulate=true
+    for(size_t shape = 0; shape < shapes.size(); shape++) {
+        vector<tinyobj::index_t> indices = shapes[shape].mesh.indices;
+        for(size_t face = 0; face < indices.size()-2; face+=3) {
+            faces.push_back(
+                uvec3(indices[face].vertex_index,
+                    indices[face+1].vertex_index,
+                    indices[face+2].vertex_index
+                ));
+        }
+    }
+}
 
 mat4 camera_matrix(float angle,float aspect_ratio) {
     //compute the model-view-projection matrix for a camera rotated about the origin by angle radians
-    mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,3.f);
+    mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,6.f);
 
     mat4 view(1.0f);
-    view = glm::translate(view, vec3(0.0f,0.0f,-1.5f));
-    view = glm::rotate(view,angle,vec3(0.0f,1.0f,0.0f));
+    view = glm::translate(view, vec3(0.f,0.f,-3.f));
+    view = glm::rotate(view,angle,vec3(0.f,1.f,0.f));
 
     return perspective * view;
+}
+
+vec4 transform_direction(const mat4& transformation, const vec3& normal) {
+    //transform a 3D vector (implicitly in homogeneous coordinates with w=0) using a 4x4 matrix
+    //and return as a 4-vector in homogeneous coordinates
+
+    vec4 homo_point(point.x,point.y,point.z,0.f);
+    return transformation * homo_point;
 }
 
 vec4 transform_point(const mat4& transformation, const vec3& point) {
     //transform a 3D vector (implicitly in homogeneous coordinates with w=1) using a 4x4 matrix
     //and return as a 4-vector in homogeneous coordinates
 
-    vec4 homo_point(point.x,point.y,point.z,1.0f);
+    vec4 homo_point(point.x,point.y,point.z,1.f);
     return transformation * homo_point;
 }
 
@@ -224,6 +272,7 @@ int main(int argc,char** argv) {
         TCLAP::ValueArg<float> angleArg("a","angle","Camera view angle",false,0.f,"radians",cmd);
         TCLAP::ValueArg<unsigned int> widthArg("x","width","Width of output in pixels",false,540u,"pixels",cmd);
         TCLAP::ValueArg<unsigned int> heightArg("y","height","Height of output in pixels",false,304u,"pixels",cmd);
+        TCLAP::ValueArg<std::string> objArg("o","obj","Wavefront .obj file to load",false,"null","file.obj",cmd);
         
         cmd.parse(argc,argv);
 
@@ -243,7 +292,12 @@ int main(int argc,char** argv) {
         vector<uvec3> faces;
 
         //load dummy data
-        add_square(vertices,faces);
+        std::string objFile = objArg.getValue();
+        if (objFile!="null") {
+            load_obj(objFile,vertices,faces);
+        } else {
+            add_square(vertices,faces);
+        }
 
         //calculate camera matrix for a camera rotated by 1 radian
         mat4 camera = camera_matrix(angle,aspect_ratio);
