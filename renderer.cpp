@@ -96,8 +96,9 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
     }
 }
 
-mat4 modelview_matrix(mat4 model,float angle) {
-    
+mat4 modelview_matrix(const mat4& model,float angle) {
+    //transform model matrix as for a camera pointed at the origin in the xz plane, rotated by angle radians
+
     mat4 modelview = glm::translate(model, vec3(0.f,0.f,-3.f));
     modelview = glm::rotate(modelview,angle,vec3(0.f,1.f,0.f));
 
@@ -105,7 +106,8 @@ mat4 modelview_matrix(mat4 model,float angle) {
 }
 
 mat4 camera_matrix(const mat4& modelview,float aspect_ratio) {
-    //compute the model-view-projection matrix for a camera rotated about the origin by angle radians
+    //premultiply a transformation matrix by a perspective projection matrix to make a camera matrix
+    
     mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,6.f);
 
     return perspective * modelview;
