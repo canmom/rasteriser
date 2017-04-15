@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <numeric>
 //glm core libraries:
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -12,6 +13,7 @@
 //glm extended libraries:
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/extented_min_max.hpp>
+#include <glm/gtc/constants.hpp>
 //libraries in local vendor folder:
 #include "./vendor/cimg/CImg.h"
 #include "./vendor/tinyobjloader/tiny_obj_loader.h"
@@ -30,6 +32,15 @@ using glm::uvec2;
 using glm::uvec3;
 
 using cimg_library::CImg;
+
+struct Light {
+    vec3 direction;
+    float intensity;
+    vec3 colour;
+    vec3 trans_dir;
+    Light(vec3 d, float i, vec3 c) : direction(d), intensity(i), colour(c) { }
+    void transform(const mat4& transformation);
+};
 
 void add_square(vector<vec3> &vertices, vector<uvec3> &faces) {
     //Load a very simple scene for testing
@@ -85,23 +96,28 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
     }
 }
 
-mat4 camera_matrix(float angle,float aspect_ratio) {
+mat4 modelview_matrix(mat4 model,float angle) {
+    
+    mat4 modelview = glm::translate(model, vec3(0.f,0.f,-3.f));
+    modelview = glm::rotate(modelview,angle,vec3(0.f,1.f,0.f));
+
+    return modelview;
+}
+
+mat4 camera_matrix(const mat4& modelview,float aspect_ratio) {
     //compute the model-view-projection matrix for a camera rotated about the origin by angle radians
     mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,6.f);
 
-    mat4 view(1.0f);
-    view = glm::translate(view, vec3(0.f,0.f,-3.f));
-    view = glm::rotate(view,angle,vec3(0.f,1.f,0.f));
-
-    return perspective * view;
+    return perspective * modelview;
 }
 
-vec4 transform_direction(const mat4& transformation, const vec3& normal) {
+vec3 transform_direction(const mat4& transformation, const vec3& point) {
     //transform a 3D vector (implicitly in homogeneous coordinates with w=0) using a 4x4 matrix
-    //and return as a 4-vector in homogeneous coordinates
+    //and return a 3D vector, ASSUMING TRANSFORMATION DOES NOT MODIFY W
 
     vec4 homo_point(point.x,point.y,point.z,0.f);
-    return transformation * homo_point;
+    vec4 thp = transformation * homo_point;
+    return vec3(thp.x,thp.y,thp.z);
 }
 
 vec4 transform_point(const mat4& transformation, const vec3& point) {
@@ -139,6 +155,16 @@ void z_divide_all(const vector<vec4>& clip_vertices, vector<vec3>& ndc_vertices)
     ndc_vertices.resize(clip_vertices.size());
 
     std::transform(clip_vertices.begin(),clip_vertices.end(),ndc_vertices.begin(),z_divide);
+}
+
+void Light::transform(const mat4& transformation) {
+    trans_dir = glm::normalize(transform_direction(transformation,direction));
+}
+
+void transform_lights(const mat4& transformation, vector<Light>& lights) {
+    for (auto it = lights.begin(); it != lights.end(); ++it) {
+        (*it).transform(transformation);
+    }
 }
 
 vec2 xy(const vec3& v) {
@@ -214,14 +240,24 @@ void bounding_box(uvec2& top_left, uvec2& bottom_right,
         vec2(0.f),image_bottom_right);
 }
 
-unsigned char shade(const vec3& bary) {
+float light_contribution(const vec3& normal, float albedo, const Light& light) {
+    return light.intensity * albedo * glm::max(0.f,glm::dot(normal,-light.trans_dir)) * glm::one_over_pi<float>();
+}
+
+unsigned char shade(const vec3& normal,float albedo, const vector<Light> lights) {
     //determine colour of pixel given barycentric coordinates
-    //NOT IMPLEMENTED
-    return 255;
+
+    vector<float> light_contributions(lights.size());
+    auto lc = std::bind(light_contribution,normal,albedo,_1);
+    std::transform(lights.begin(),lights.end(),light_contributions.begin(), lc);
+    
+    float result = glm::min(std::accumulate(light_contributions.begin(),light_contributions.end(),0.f),255.f);
+
+    return (unsigned char)result;
 }
 
 void update_pixel(unsigned int raster_x, unsigned int raster_y,
-    const vec3& vert0, const vec3& vert1, const vec3& vert2,
+    const vec3& vert0, const vec3& vert1, const vec3& vert2, const vec3& normal, const vector<Light>& lights,
     CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer) {
     //take pixel at point raster_x,raster_y in image plane
     //determine if it is inside traingle defined by vert0, vert1 and vert2
@@ -236,34 +272,42 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
         //Is this pixel nearer than the current value in the depth buffer?
         if(depth < depth_buffer(raster_x,raster_y)) {
             depth_buffer(raster_x,raster_y,0,0) = depth;
-            frame_buffer(raster_x,raster_y,0,0) = shade(bary/* some other vertex data*/); //todo: update shading function
+            frame_buffer(raster_x,raster_y,0,0) = shade(normal,1.0,lights); //todo: update shading function
         }
     }
 }
 
-void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices,
+void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices, const vector<vec3>& camera_vertices, const vector<Light>& lights,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height) {
     //draw all the pixels from a triangle to the frame and depth buffers
     //face should contain three indices into raster_vertices
 
-    vec3 vert0 = raster_vertices[face.x];
-    vec3 vert1 = raster_vertices[face.y];
-    vec3 vert2 = raster_vertices[face.z];
+    vec3 vert0_raster = raster_vertices[face.x];
+    vec3 vert1_raster = raster_vertices[face.y];
+    vec3 vert2_raster = raster_vertices[face.z];
+
+    vec3 vert0_camera = camera_vertices[face.x];
+    vec3 vert1_camera = camera_vertices[face.y];
+    vec3 vert2_camera = camera_vertices[face.z];
 
     uvec2 top_left;
     uvec2 bottom_right;
 
-    bounding_box(top_left,bottom_right,vert0,vert1,vert2,image_width,image_height);
+    vec3 normal = glm::normalize(glm::cross(vert1_camera-vert0_camera,vert2_camera-vert0_camera));
+
+    bounding_box(top_left,bottom_right,vert0_raster,vert1_raster,vert2_raster,image_width,image_height);
 
     //loop over all pixels inside bounding box of triangle
     //call update_pixel on each one to update frame and depth buffers
     for(unsigned int raster_y = top_left.y; raster_y <= bottom_right.y; raster_y++) {
         for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
-            update_pixel(raster_x,raster_y, vert0,vert1,vert2, *frame_buffer,*depth_buffer);
+            update_pixel(raster_x,raster_y, vert0_raster,vert1_raster,vert2_raster, normal, lights, *frame_buffer,*depth_buffer);
         }
     }
 }
+
+
 
 int main(int argc,char** argv) {
     try {
@@ -283,7 +327,9 @@ int main(int argc,char** argv) {
         float angle = angleArg.getValue();
 
         //define storage for vertices in various coordinate systems
-        vector<vec3> vertices;
+        vector<vec3> model_vertices;
+        vector<vec4> camera_vertices_homo;
+        vector<vec3> camera_vertices;
         vector<vec4> clip_vertices;
         vector<vec3> ndc_vertices;
         vector<vec3> raster_vertices;
@@ -291,19 +337,37 @@ int main(int argc,char** argv) {
         //define storage for faces (indices into vertices)
         vector<uvec3> faces;
 
-        //load dummy data
+        //define storage for lights
+        vector<Light> lights;
+
+        //add a light from above and in front of scene
+        lights.push_back(Light(vec3(0.f,1.f,-1.f),500.f,vec3(1.f)));
+
+        //load model to render
         std::string objFile = objArg.getValue();
         if (objFile!="null") {
-            load_obj(objFile,vertices,faces);
+            load_obj(objFile,model_vertices,faces);
         } else {
-            add_square(vertices,faces);
+            //load dummy data
+            add_square(model_vertices,faces);
         }
 
-        //calculate camera matrix for a camera rotated by 1 radian
-        mat4 camera = camera_matrix(angle,aspect_ratio);
+        //calculate model-view matrix
+        mat4 model(1.0f); //later include per-model model matrix
+
+        mat4 modelview = modelview_matrix(model,angle);
+
+        //add perspective projection to model-view matrix
+        mat4 camera = camera_matrix(modelview,aspect_ratio);
+
+        //transform vertices into camera space using model-view matrix for later use in shading
+        transform_vertices(modelview, model_vertices, camera_vertices_homo);
+        z_divide_all(camera_vertices_homo,camera_vertices);
+
+        transform_lights(modelview,lights);
 
         //transform vertices into clip space using camera matrix
-        transform_vertices(camera, vertices, clip_vertices);
+        transform_vertices(camera, model_vertices, clip_vertices);
 
         //transform vertices into Normalised Device Coordinates
         z_divide_all(clip_vertices, ndc_vertices);
@@ -316,7 +380,7 @@ int main(int argc,char** argv) {
         CImg<float> depth_buffer(image_width,image_height,1,1,1.f);
 
         //for each face in faces, draw it to the frame and depth buffers
-        auto dt = std::bind(draw_triangle, _1, raster_vertices, &frame_buffer, &depth_buffer, image_width, image_height);
+        auto dt = std::bind(draw_triangle, _1, raster_vertices, camera_vertices, lights, &frame_buffer, &depth_buffer, image_width, image_height);
         std::for_each(faces.begin(),faces.end(),dt);
 
         //output frame and depth buffers
