@@ -7,6 +7,7 @@ This is a self-learning project intended to teach me how an Open-GL style render
 ## Third party code
 
 Includes the [CImg](http://cimg.eu/) library. The license is contained in the vendor/cimg/ folder along with the header file.
+Includes [tinyobjloader](https://github.com/syoyo/tinyobjloader) by syoyo. The license is written at the top of the header file.
 
 Needed for compilation:
 - [OpenGL Mathematics (GLM)](https://github.com/g-truc/glm), which should be installed using [Conan](https://www.conan.io/) as described below.
@@ -25,7 +26,10 @@ Needed to run:
 
 ## Use
 Run the executable from the command line. Flags available:
-- `-h`/`--help`: display help
+- `-h`/`--help`: display command line options and exit
+- `-o`/`--obj`: render the model in the specified Wavefront .obj file (otherwise renders a square)
 - `-a`/`--angle`: rotation about the y axis (radians)
 - `-x`/`--width`: width of the output image (pixels)
 - `-y`/`--height`: height of the output image (pixels)
+
+Two images will be output. `frame.png` is the rendered image, and `depth.png` is the depth buffer.
