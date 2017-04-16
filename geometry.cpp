@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "light.h"
+#include "geometry.h"
 
 using std::vector;
 using glm::vec3;

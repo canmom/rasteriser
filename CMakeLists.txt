@@ -4,9 +4,13 @@ cmake_minimum_required(VERSION 2.8.12)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 add_library(geometry geometry.cpp)
-target_compile_features(geometry PRIVATE cxx_range_for)
+add_library(shading shading.cpp)
+add_library(drawing drawing.cpp)
 
 add_executable(renderer renderer.cpp)
-target_link_libraries(renderer ${CONAN_LIBS} -lX11 -lpthread geometry)
-target_compile_features(renderer PRIVATE cxx_range_for)
+target_link_libraries(drawing shading)
+target_link_libraries(renderer ${CONAN_LIBS} -lX11 -lpthread geometry shading drawing)
