@@ -83,7 +83,7 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
         //Is this pixel nearer than the current value in the depth buffer?
         if(depth < depth_buffer(raster_x,raster_y)) {
             depth_buffer(raster_x,raster_y,0,0) = depth;
-            uvec3 pixel = shade(normal,vec3(1.0),lights);
+            uvec3 pixel = shade(normal,vec3(1.f),lights);
             frame_buffer(raster_x,raster_y,0,0) = (unsigned char)pixel.r;
             frame_buffer(raster_x,raster_y,0,1) = (unsigned char)pixel.g;
             frame_buffer(raster_x,raster_y,0,2) = (unsigned char)pixel.b;
