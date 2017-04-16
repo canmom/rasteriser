@@ -7,8 +7,8 @@
 
 #include "light.h"
 
-float light_contribution(const glm::vec3& normal, float albedo, const Light& light);
+glm::vec3 light_contribution(const glm::vec3& normal, const glm::vec3& albedo, const Light& light);
 
-unsigned char shade(const glm::vec3& normal, float albedo, const std::vector<Light> lights);
+glm::uvec3 shade(const glm::vec3& normal, const glm::vec3& albedo, const std::vector<Light> lights);
 
 #endif //RASTERISER_SHADING_H
