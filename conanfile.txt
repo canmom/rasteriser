@@ -1,6 +1,7 @@
 [requires]
 glm/0.9.7.6@dlarudgus20/stable
 TCLAP/master@jmmut/testing
+text-csv/latest@signal9/stable
 
 [generators]
 cmake
