@@ -5,7 +5,7 @@
 
 #include <glm/gtx/extented_min_max.hpp>
 
-#include "./vendor/cimg/CImg.h"
+#include "CImg.h"
 #include "swizzle.h"
 #include "light.h"
 #include "shading.h"

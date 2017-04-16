@@ -12,8 +12,8 @@
 #include <tclap/CmdLine.h>
 
 //libraries in local vendor folder:
-#include "./vendor/cimg/CImg.h"
-#include "./vendor/tinyobjloader/tiny_obj_loader.h"
+#include "CImg.h"
+#include "tiny_obj_loader.h"
 
 //project headers
 #include "light.h"

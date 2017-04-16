@@ -6,7 +6,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 
-#include "./vendor/cimg/CImg.h"
+#include "CImg.h"
 #include "light.h"
 
 float edge(const glm::vec2& point, const glm::vec3& vert1, const glm::vec3& vert2);
