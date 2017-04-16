@@ -93,10 +93,12 @@ int main(int argc,char** argv) {
     try {
         TCLAP::CmdLine cmd("Render a model by rasterisation.", ' ', "0.1");
 
-        TCLAP::ValueArg<float> angleArg("a","angle","Camera view angle",false,0.f,"radians",cmd);
+        TCLAP::ValueArg<float> angleArg("a","camphi","Camera azimuthal view angle",false,0.f,"radians",cmd);
         TCLAP::ValueArg<unsigned int> widthArg("x","width","Width of output in pixels",false,540u,"pixels",cmd);
         TCLAP::ValueArg<unsigned int> heightArg("y","height","Height of output in pixels",false,304u,"pixels",cmd);
         TCLAP::ValueArg<std::string> objArg("o","obj","Wavefront .obj file to load",false,"null","file.obj",cmd);
+        TCLAP::ValueArg<float> lightThetaArg("t","lighttheta","inclination angle of main light",false,1.f,"radians",cmd);
+        TCLAP::ValueArg<float> lightPhiArg("p","lightphi","azimuth angle of main light",false,1.f,"radians",cmd);
         
         cmd.parse(argc,argv);
 
@@ -105,6 +107,11 @@ int main(int argc,char** argv) {
         unsigned int image_height = heightArg.getValue();
         float aspect_ratio = (float)image_width/(float)image_height;
         float angle = angleArg.getValue();
+        float lightTheta = lightThetaArg.getValue();
+        float lightPhi = lightPhiArg.getValue();
+
+        vec3 lightDir(-glm::sin(lightTheta)*glm::cos(lightPhi),-glm::cos(lightTheta),-glm::sin(lightTheta)*glm::sin(lightPhi));
+
 
         //define storage for vertices in various coordinate systems
         vector<vec3> model_vertices;
@@ -121,7 +128,7 @@ int main(int argc,char** argv) {
         vector<Light> lights;
 
         //add a light from above and in front of scene
-        lights.push_back(Light(vec3(0.f,1.f,-1.f),500.f,vec3(1.f)));
+        lights.push_back(Light(lightDir,500.f,vec3(1.f)));
 
         //load model to render
         std::string objFile = objArg.getValue();
