@@ -115,13 +115,15 @@ void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices, const
 
     vec3 normal = glm::normalize(glm::cross(vert1_camera-vert0_camera,vert2_camera-vert0_camera));
 
-    bounding_box(top_left,bottom_right,vert0_raster,vert1_raster,vert2_raster,image_width,image_height);
+    if (normal.z > 0.f) { //backface culling
+        bounding_box(top_left,bottom_right,vert0_raster,vert1_raster,vert2_raster,image_width,image_height);
 
-    //loop over all pixels inside bounding box of triangle
-    //call update_pixel on each one to update frame and depth buffers
-    for(unsigned int raster_y = top_left.y; raster_y <= bottom_right.y; raster_y++) {
-        for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
-            update_pixel(raster_x,raster_y, vert0_raster,vert1_raster,vert2_raster, normal, lights, *frame_buffer,*depth_buffer);
+        //loop over all pixels inside bounding box of triangle
+        //call update_pixel on each one to update frame and depth buffers
+        for(unsigned int raster_y = top_left.y; raster_y <= bottom_right.y; raster_y++) {
+            for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
+                update_pixel(raster_x,raster_y, vert0_raster,vert1_raster,vert2_raster, normal, lights, *frame_buffer,*depth_buffer);
+            }
         }
     }
 }

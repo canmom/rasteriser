@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <string>
 
 //glm core libraries:
 #include <glm/vec3.hpp>
@@ -71,15 +72,34 @@ int main(int argc,char** argv) {
         depth_buffer.normalize(0,255).save("depth.png");
     } else {
         cimg_library::CImgDisplay window(frame_buffer,"Render");
+
+        //initialise values for drawing time step
         auto last_time = std::chrono::steady_clock::now();
+        std::string frame_rate;
+        std::chrono::duration<float> time_step;
+        unsigned char white[3] = {255,255,255};
+        unsigned char black[3] = {0,0,0};
+
+        //drawing loop
         while(!window.is_closed()) {
+            //clear the frame
             frame_buffer.fill(0);
             depth_buffer.fill(1.f);
-            draw_frame(model_vertices, faces, lights, arguments, &frame_buffer, &depth_buffer);            
+
+            //render
+            draw_frame(model_vertices, faces, lights, arguments, &frame_buffer, &depth_buffer);
+
+            //display the frame rate
+            frame_buffer.draw_text(5,5,frame_rate.c_str(),white,black);
             window.display(frame_buffer);
+
+            //calculate the time elapsed drawing
             auto next_time = std::chrono::steady_clock::now();
-            std::chrono::duration<float> time_step = next_time-last_time;
+            time_step = next_time-last_time;
+            frame_rate = std::to_string(1.f/time_step.count());
             last_time = next_time;
+
+            //rotate proportional to time elapsed
             arguments.angle += time_step.count();
         }
     }
