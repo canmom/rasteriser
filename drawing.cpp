@@ -2,22 +2,27 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/mat4x4.hpp>
 
 #include <glm/gtx/extented_min_max.hpp>
 
 #include "CImg.h"
+
 #include "swizzle.h"
 #include "light.h"
 #include "shading.h"
-
+#include "geometry.h"
 #include "drawing.h"
+#include "arguments.h"
 
 using std::vector;
 
 using glm::vec2;
 using glm::vec3;
+using glm::vec4;
 using glm::uvec2;
 using glm::uvec3;
+using glm::mat4;
 
 using cimg_library::CImg;
 
@@ -118,5 +123,46 @@ void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices, const
         for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
             update_pixel(raster_x,raster_y, vert0_raster,vert1_raster,vert2_raster, normal, lights, *frame_buffer,*depth_buffer);
         }
+    }
+}
+
+void draw_frame(const vector<vec3>& model_vertices, const vector<uvec3>& faces, vector<Light>& lights, const Args& arguments,
+    CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer) {
+    //transform the model vertices and draw a frame to the frame buffer
+
+    //define storage for vertices in various coordinate systems
+    unsigned int num_vertices = model_vertices.size();
+    vector<vec4> camera_vertices_homo(num_vertices);
+    vector<vec3> camera_vertices(num_vertices);
+    vector<vec4> clip_vertices(num_vertices);
+    vector<vec3> ndc_vertices(num_vertices);
+    vector<vec3> raster_vertices(num_vertices);
+
+    //calculate model-view matrix
+    mat4 model(1.0f); //later include per-model model matrix
+
+    mat4 modelview = modelview_matrix(model,arguments.angle);
+
+    //add perspective projection to model-view matrix
+    mat4 camera = camera_matrix(modelview,arguments.aspect_ratio);
+
+    //transform vertices into camera space using model-view matrix for later use in shading
+    transform_vertices(modelview, model_vertices, camera_vertices_homo);
+    z_divide_all(camera_vertices_homo,camera_vertices);
+
+    transform_lights(modelview,lights);
+
+    //transform vertices into clip space using camera matrix
+    transform_vertices(camera, model_vertices, clip_vertices);
+
+    //transform vertices into Normalised Device Coordinates
+    z_divide_all(clip_vertices, ndc_vertices);
+
+    //transform Normalised Device Coordinates to raster coordinates given our image
+    ndc_to_raster_all(arguments.image_width,arguments.image_height,ndc_vertices,raster_vertices);
+
+    //for each face in faces, draw it to the frame and depth buffers
+    for (auto face = faces.begin(); face < faces.end(); ++face) {
+        draw_triangle(*face,raster_vertices,camera_vertices,lights,frame_buffer,depth_buffer,arguments.image_width,arguments.image_height);
     }
 }

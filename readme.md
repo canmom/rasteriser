@@ -30,8 +30,10 @@ Needed to run:
 Run the executable from the command line. Flags available:
 - `-h`/`--help`: display command line options and exit
 - `-o`/`--obj`: render the model in the specified Wavefront .obj file (otherwise renders a square)
-- `-a`/`--angle`: rotation about the y axis (radians)
+- `-l`/`--lights`: (required) specify CSV file containing a list of directional lights in the format `dir_x,dir_y,dir_z,intensity,red,green,blue`
+- `-a`/`--angle`: [initial] rotation about the y axis (radians)
 - `-x`/`--width`: width of the output image (pixels)
 - `-y`/`--height`: height of the output image (pixels)
+- `-s`/`--spin`: instead of outputting the frame and depth buffers as images, display a window with the model rotating at 1 radian/sec about the y axis
 
-Two images will be output. `frame.png` is the rendered image, and `depth.png` is the depth buffer.
+If `-s` is not set, two images will be output. `frame.png` is the rendered image, and `depth.png` is the depth buffer.

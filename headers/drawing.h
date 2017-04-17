@@ -8,6 +8,7 @@
 
 #include "CImg.h"
 #include "light.h"
+#include "arguments.h"
 
 float edge(const glm::vec2& point, const glm::vec3& vert1, const glm::vec3& vert2);
 
@@ -27,5 +28,8 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
 void draw_triangle(const glm::uvec3& face, const std::vector<glm::vec3>& raster_vertices, const std::vector<glm::vec3>& camera_vertices, const std::vector<Light>& lights,
     cimg_library::CImg<unsigned char>* frame_buffer, cimg_library::CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height);
+
+void draw_frame(const std::vector<glm::vec3>& model_vertices, const std::vector<glm::uvec3>& faces, std::vector<Light>& lights, const Args& arguments,
+    cimg_library::CImg<unsigned char>* frame_buffer, cimg_library::CImg<float>* depth_buffer);
 
 #endif //RASTERISER_DRAWING_H

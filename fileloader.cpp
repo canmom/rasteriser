@@ -2,16 +2,21 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <fstream>
 
 #include <glm/vec3.hpp>
+#include <text/csv/istream.hpp>
 
 #include "tiny_obj_loader.h"
 
+#include "light.h"
 #include "fileloader.h"
 
 using glm::vec3;
 using glm::uvec3;
 using std::vector;
+
+using ::text::csv::csv_istream;
 
 void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
@@ -53,5 +58,17 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
                     indices[face+2].vertex_index
                 ));
         }
+    }
+}
+
+void load_lights(std::string file, vector<Light> &lights) {
+    std::ifstream file_stream(file);
+    csv_istream csv_stream(file_stream);
+
+    float dx, dy, dz, i, r, g, b;
+
+    while(csv_stream) {
+        csv_stream >> dx >> dy >> dz >> i >> r >> g >> b;
+        lights.push_back(Light(vec3(dx,dy,dz),i,vec3(r,g,b)));
     }
 }
