@@ -9,6 +9,7 @@ struct Args {
     float aspect_ratio;
     float angle;
     bool spin;
+    bool flat;
     std::string obj_file;
     std::string lights_file;
     Args(int argc, char** argv);

@@ -15,6 +15,7 @@ Args::Args(int argc, char** argv) {
         TCLAP::ValueArg<std::string> objArg("o","obj","Wavefront .obj file to load",false,"null","model.obj",cmd);
         TCLAP::ValueArg<std::string> lightsArg("l","lights","CSV file containing directional lights in format direction_x,dir_y,dir_z,intensity,red,green,blue",true,"","lights.csv",cmd);
         TCLAP::SwitchArg spinArg("s","spin","Display an animation of the model rotating",cmd);
+        TCLAP::SwitchArg flatArg("f","flat","Use flat rather than smooth shading",cmd);
         
         cmd.parse(argc,argv);
 
@@ -25,6 +26,7 @@ Args::Args(int argc, char** argv) {
         lights_file = lightsArg.getValue();
         obj_file = objArg.getValue();
         spin = spinArg.getValue();
+        flat = flatArg.getValue();
     } catch (TCLAP::ArgException &e)  // catch any exceptions
     { std::cerr << "Error: " << e.error() << " for arg " << e.argId() << std::endl; exit(1);}
 }

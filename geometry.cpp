@@ -9,6 +9,7 @@
 
 #include "light.h"
 #include "geometry.h"
+#include "swizzle.h"
 
 using std::vector;
 using glm::vec3;
@@ -25,10 +26,12 @@ mat4 modelview_matrix(const mat4& model,float angle) {
     return modelview;
 }
 
-mat4 camera_matrix(const mat4& modelview,float aspect_ratio) {
+mat4 camera_matrix(const mat4& modelview,float aspect_ratio, float & z_offset) {
     //premultiply a transformation matrix by a perspective projection matrix to make a camera matrix
     
     mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,6.f);
+
+    z_offset = perspective[3][3];
 
     return perspective * modelview;
 }
@@ -72,6 +75,11 @@ vec3 ndc_to_raster(int width,int height,const vec3& ndc_vertex) {
         ndc_vertex.z);
 }
 
+vec3 face_normal(vec3 vert0, vec3 vert1, vec3 vert2) {
+    //return non-normalised (area-proportional) face normal of face defined by these three vertices
+    return glm::cross(vert1-vert0,vert2-vert0);
+}
+
 void transform_vertices(const mat4& transformation, const vector<vec3>& vertices, vector<vec4>& result) {
     //Apply transformation to each vec3 in vertices and store results in result
 
@@ -84,12 +92,31 @@ void transform_vertices(const mat4& transformation, const vector<vec3>& vertices
     std::transform(vertices.begin(),vertices.end(),result.begin(),tp);
 }
 
+void transform_normals(const mat4& transformation, const vector<vec3>& vertices, vector<vec3>& result) {
+    //Apply transformation to each vec3 in vertices and store results in result
+
+    result.resize(vertices.size());
+    mat4 in_tp_transformation = glm::transpose(glm::inverse(transformation)); //for transforming normals
+
+    //partially apply the transform_point function with the given transformation matrix
+    auto td = std::bind(transform_direction, in_tp_transformation, _1);
+    
+    //apply the transformation to every point and store the results in 'result'
+    std::transform(vertices.begin(),vertices.end(),result.begin(),td);
+}
+
 void z_divide_all(const vector<vec4>& clip_vertices, vector<vec3>& ndc_vertices) {
     //apply z_devide to all vertices in clip_vertices, and store result in ndc_vertices
 
     ndc_vertices.resize(clip_vertices.size());
 
     std::transform(clip_vertices.begin(),clip_vertices.end(),ndc_vertices.begin(),z_divide);
+}
+
+void xyz_all(const std::vector<glm::vec4>& homo_vertices, std::vector<glm::vec3>& cart_vertices) {
+    cart_vertices.resize(homo_vertices.size());
+
+    std::transform(homo_vertices.begin(),homo_vertices.end(),cart_vertices.begin(),xyz);
 }
 
 void Light::transform(const mat4& transformation) {

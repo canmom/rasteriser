@@ -18,7 +18,7 @@ using std::vector;
 
 using ::text::csv::csv_istream;
 
-void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
+void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces, vector<vec3> & vertnormals) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
 
     tinyobj::attrib_t attrib;
@@ -44,6 +44,15 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces) {
             vec3(attrib.vertices[vert],
                 attrib.vertices[vert+1],
                 attrib.vertices[vert+2]
+            ));
+    }
+
+    //convert the vertex normals into our format
+    for(size_t vert = 0; vert < attrib.normals.size()-2; vert+=3) {
+        vertices.push_back(
+            vec3(attrib.normals[vert],
+                attrib.normals[vert+1],
+                attrib.normals[vert+2]
             ));
     }
 

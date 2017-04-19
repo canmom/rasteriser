@@ -8,7 +8,7 @@
 
 #include "light.h"
 
-void load_obj(std::string file, std::vector<glm::vec3> &vertices, std::vector<glm::uvec3> &faces);
+void load_obj(std::string file, std::vector<glm::vec3> &vertices, std::vector<glm::uvec3> &faces, std::vector<glm::vec3> &vertnormals);
 
 void load_lights(std::string file, std::vector<Light> &lights);
 
