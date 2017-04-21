@@ -5,11 +5,10 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
-glm::vec2 xy(const glm::vec3& v) {
-    //return 2D vector containing the first two components of v
+glm::vec2 xy(const glm::vec3& v);
 
-    return glm::vec2(v.x,v.y);
-}
+glm::vec3 xyz(const glm::vec4& v);
 
 #endif //RASTERISER_SWIZZLE_H

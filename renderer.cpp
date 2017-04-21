@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <string>
+#include <array>
 
 //glm core libraries:
 #include <glm/vec3.hpp>
@@ -17,6 +17,7 @@
 #include "drawing.h"
 #include "fileloader.h"
 #include "arguments.h"
+#include "face.h"
 
 using std::vector;
 
@@ -26,15 +27,17 @@ using glm::uvec3;
 
 using cimg_library::CImg;
 
-void add_square(vector<vec3> &vertices, vector<uvec3> &faces) {
+void add_square(vector<vec3> &vertices, vector<Triangle> &faces,vector<vec3> &vertnormals) {
     //Load a very simple scene for testing
     vertices.push_back(vec3(-0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(-0.5f,0.5f,0.0f));
     vertices.push_back(vec3(0.5f,0.5f,0.0f));
 
-    faces.push_back(uvec3(0,1,2));
-    faces.push_back(uvec3(2,1,3));
+    faces.push_back(Triangle({0,1,2},{0,0,0},{0,1,2}));
+    faces.push_back(Triangle({2,1,3},{0,0,0},{2,1,3}));
+
+    vertnormals.assign(4,vec3(0.f,0.f,1.f));
 }
 
 int main(int argc,char** argv) {
@@ -43,8 +46,11 @@ int main(int argc,char** argv) {
     //define storage for vertices
     vector<vec3> model_vertices;
 
+    //define storage for vertex normals
+    vector<vec3> model_vertnormals;
+
     //define storage for faces (indices into vertices)
-    vector<uvec3> faces;
+    vector<Triangle> faces;
 
     //define storage for lights
     vector<Light> lights;
@@ -54,10 +60,10 @@ int main(int argc,char** argv) {
 
     //load model to render
     if (arguments.obj_file!="null") {
-        load_obj(arguments.obj_file,model_vertices,faces);
+        load_obj(arguments.obj_file,model_vertices,faces,model_vertnormals);
     } else {
-        //load dummy data
-        add_square(model_vertices,faces);
+        //load a square if no model provided
+        add_square(model_vertices,faces,model_vertnormals);
     }
 
     //instantiate buffers for storing pixel data
@@ -65,7 +71,7 @@ int main(int argc,char** argv) {
     CImg<float> depth_buffer(arguments.image_width,arguments.image_height,1,1,1.f);
 
     if (not arguments.spin) {
-        draw_frame(model_vertices, faces, lights, arguments, &frame_buffer, &depth_buffer);
+        draw_frame(model_vertices, faces, model_vertnormals, lights, arguments, &frame_buffer, &depth_buffer);
 
         //output frame and depth buffers
         frame_buffer.save("frame.png");
@@ -87,7 +93,7 @@ int main(int argc,char** argv) {
             depth_buffer.fill(1.f);
 
             //render
-            draw_frame(model_vertices, faces, lights, arguments, &frame_buffer, &depth_buffer);
+            draw_frame(model_vertices, faces, model_vertnormals, lights, arguments, &frame_buffer, &depth_buffer);
 
             //display the frame rate
             frame_buffer.draw_text(5,5,frame_rate.c_str(),white,black);
@@ -100,7 +106,7 @@ int main(int argc,char** argv) {
             last_time = next_time;
 
             //rotate proportional to time elapsed
-            arguments.angle += time_step.count();
+            arguments.tait_bryan_angles.y += time_step.count();
         }
     }
     
