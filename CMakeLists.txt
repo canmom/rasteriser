@@ -19,4 +19,9 @@ add_library(args arguments.cpp)
 add_executable(renderer renderer.cpp)
 target_link_libraries(geometry swizzle)
 target_link_libraries(drawing shading geometry swizzle)
-target_link_libraries(renderer ${CONAN_LIBS} -lX11 -lpthread geometry shading drawing fileloader args)
+target_link_libraries(renderer ${CONAN_LIBS} geometry shading drawing fileloader args)
+
+if(UNIX AND NOT APPLE)
+	#if building under linux
+	target_link_libraries(renderer -lx11 -lpthread)
+endif()

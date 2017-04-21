@@ -1,4 +1,5 @@
 #include <vector>
+#include <array>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -14,8 +15,10 @@
 #include "geometry.h"
 #include "drawing.h"
 #include "arguments.h"
+#include "face.h"
 
 using std::vector;
+using std::array;
 
 using glm::vec2;
 using glm::vec3;
@@ -83,18 +86,24 @@ void bounding_box(uvec2& top_left, uvec2& bottom_right,
 
 
 void update_pixel(unsigned int raster_x, unsigned int raster_y,
-    const vec3& vert0, const vec3& vert1, const vec3& vert2,
-    vec3& normal, const vec3& vert0normal, const vec3& vert1normal, const vec3& vert2normal, const vector<Light>& lights,
+    const array<vec3,3>& raster_vertices,
+    vec3& normal, const array<vec3,3>& vertnormals, const vector<Light>& lights,
     CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer, bool flat, float z_offset) {
     //take pixel at point raster_x,raster_y in image plane
     //determine if it is inside traingle defined by vert0, vert1 and vert2 (each in raster coordinates)
     //if so, determine if it is nearer than the current depth buffer
     //if so, update depth buffer and shade pixel
 
-    vec3 bary = barycentric(vec2(raster_x,raster_y),vert0,vert1,vert2);
-    float depth = interpolate(vert0.z,vert1.z,vert2.z,bary);
+    vec3 bary = barycentric(vec2(raster_x,raster_y),raster_vertices[0],raster_vertices[1],raster_vertices[2]);
+
+    //determine the Normalised Device Coordinate depth value
+    float depth = interpolate(raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z,bary);
+
+    //if smooth shading is enabled, update normal according to position in triangle
     if(not flat) {
-        normal = perspective_interpolate(vert0normal,vert1normal,vert2normal,depth,vec3(vert0.z,vert1.z,vert2.z),z_offset,bary);
+        normal = perspective_interpolate(vertnormals[0],vertnormals[1],vertnormals[2],
+            depth,vec3(raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z),
+            z_offset,bary);
     }
 
     //Is this pixel inside the triangle?
@@ -110,46 +119,44 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
     }
 }
 
-void draw_triangle(const uvec3& face, const vector<vec3>& raster_vertices,
+void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
     const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<Light>& lights,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height, bool flat, float z_offset) {
     //draw all the pixels from a triangle to the frame and depth buffers
     //face should contain three indices into raster_vertices
 
-    vec3 vert0_raster = raster_vertices[face.x];
-    vec3 vert1_raster = raster_vertices[face.y];
-    vec3 vert2_raster = raster_vertices[face.z];
-
-    vec3 vert0_camera = camera_vertices[face.x];
-    vec3 vert1_camera = camera_vertices[face.y];
-    vec3 vert2_camera = camera_vertices[face.z];
-
-    vec3 vert0normal_camera = camera_vertnormals[face.x];
-    vec3 vert1normal_camera = camera_vertnormals[face.y];
-    vec3 vert2normal_camera = camera_vertnormals[face.z];
+    array<vec3,3> face_raster_vertices;
+    array<vec3,3> face_camera_vertices;
+    array<vec3,3> face_camera_vertnormals;
+    for (size_t facevert = 0; facevert < 3; facevert++) {
+        face_raster_vertices[facevert] = raster_vertices[face.vertices[facevert]];
+        face_camera_vertices[facevert] = camera_vertices[face.vertices[facevert]];
+        if (not flat) {face_camera_vertnormals[facevert] = camera_vertnormals[face.normals[facevert]];}
+    }
 
     uvec2 top_left;
     uvec2 bottom_right;
-    vec3 face_normal = glm::normalize(glm::cross(vert1_camera-vert0_camera,vert2_camera-vert0_camera));
+    vec3 face_normal = glm::normalize(glm::cross(face_camera_vertices[1]-face_camera_vertices[0],face_camera_vertices[2]-face_camera_vertices[0]));
 
     if (face_normal.z > 0.f) { //backface culling
-        bounding_box(top_left,bottom_right,vert0_raster,vert1_raster,vert2_raster,image_width,image_height);
+        bounding_box(top_left,bottom_right,
+            face_raster_vertices[0],face_raster_vertices[1],face_raster_vertices[2],image_width,image_height);
 
         //loop over all pixels inside bounding box of triangle
         //call update_pixel on each one to update frame and depth buffers
         for(unsigned int raster_y = top_left.y; raster_y <= bottom_right.y; raster_y++) {
             for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
                 update_pixel(raster_x,raster_y,
-                    vert0_raster,vert1_raster,vert2_raster,
-                    face_normal,vert0normal_camera,vert1normal_camera,vert2normal_camera,
+                    face_raster_vertices,
+                    face_normal, face_camera_vertnormals,
                     lights, *frame_buffer,*depth_buffer, flat, z_offset);
             }
         }
     }
 }
 
-void draw_frame(const vector<vec3>& model_vertices, const vector<uvec3>& faces,
+void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& faces,
     const vector<vec3>&model_vertnormals, vector<Light>& lights, const Args& arguments,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer) {
     //transform the model vertices and draw a frame to the frame buffer

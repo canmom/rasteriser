@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <array>
 
 #include <glm/vec3.hpp>
 #include <text/csv/istream.hpp>
@@ -11,14 +12,16 @@
 
 #include "light.h"
 #include "fileloader.h"
+#include "face.h"
 
 using glm::vec3;
 using glm::uvec3;
 using std::vector;
+using std::array;
 
 using ::text::csv::csv_istream;
 
-void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces, vector<vec3> & vertnormals) {
+void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
 
     tinyobj::attrib_t attrib;
@@ -39,7 +42,7 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces, ve
     }
 
     //convert the vertices into our format
-    for(size_t vert = 0; vert < attrib.vertices.size()-2; vert+=3) {
+    for(size_t vert = 0; vert < attrib.vertices.size(); vert+=3) {
         vertices.push_back(
             vec3(attrib.vertices[vert],
                 attrib.vertices[vert+1],
@@ -48,8 +51,8 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces, ve
     }
 
     //convert the vertex normals into our format
-    for(size_t vert = 0; vert < attrib.normals.size()-2; vert+=3) {
-        vertices.push_back(
+    for(size_t vert = 0; vert < attrib.normals.size(); vert+=3) {
+        vertnormals.push_back(
             vec3(attrib.normals[vert],
                 attrib.normals[vert+1],
                 attrib.normals[vert+2]
@@ -61,13 +64,16 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<uvec3> &faces, ve
     for(size_t shape = 0; shape < shapes.size(); shape++) {
         vector<tinyobj::index_t> indices = shapes[shape].mesh.indices;
         for(size_t face = 0; face < indices.size()-2; face+=3) {
-            faces.push_back(
-                uvec3(indices[face].vertex_index,
-                    indices[face+1].vertex_index,
-                    indices[face+2].vertex_index
-                ));
+            triangles.push_back(
+                Triangle(
+                    {indices[face].vertex_index, indices[face+1].vertex_index, indices[face+2].vertex_index},
+                    {indices[face].normal_index, indices[face+1].normal_index, indices[face+2].normal_index},
+                    {indices[face].texcoord_index, indices[face+1].texcoord_index, indices[face+2].texcoord_index}
+                    ));
         }
     }
+
+    std::cout << "Loaded model " << file << std::endl;
 }
 
 void load_lights(std::string file, vector<Light> &lights) {

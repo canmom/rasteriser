@@ -2,7 +2,7 @@
 #include <vector>
 #include <string>
 #include <chrono>
-#include <string>
+#include <array>
 
 //glm core libraries:
 #include <glm/vec3.hpp>
@@ -17,6 +17,7 @@
 #include "drawing.h"
 #include "fileloader.h"
 #include "arguments.h"
+#include "face.h"
 
 using std::vector;
 
@@ -26,15 +27,15 @@ using glm::uvec3;
 
 using cimg_library::CImg;
 
-void add_square(vector<vec3> &vertices, vector<uvec3> &faces,vector<vec3> &vertnormals) {
+void add_square(vector<vec3> &vertices, vector<Triangle> &faces,vector<vec3> &vertnormals) {
     //Load a very simple scene for testing
     vertices.push_back(vec3(-0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(-0.5f,0.5f,0.0f));
     vertices.push_back(vec3(0.5f,0.5f,0.0f));
 
-    faces.push_back(uvec3(0,1,2));
-    faces.push_back(uvec3(2,1,3));
+    faces.push_back(Triangle({0,1,2},{0,0,0},{0,1,2}));
+    faces.push_back(Triangle({2,1,3},{0,0,0},{2,1,3}));
 
     vertnormals.assign(4,vec3(0.f,0.f,1.f));
 }
@@ -49,7 +50,7 @@ int main(int argc,char** argv) {
     vector<vec3> model_vertnormals;
 
     //define storage for faces (indices into vertices)
-    vector<uvec3> faces;
+    vector<Triangle> faces;
 
     //define storage for lights
     vector<Light> lights;
