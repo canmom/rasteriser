@@ -2,14 +2,18 @@
 #define RASTERISER_ARGUMENTS_H
 
 #include <string>
+#include <glm/vec3.hpp>
 
 struct Args {
     unsigned int image_width;
     unsigned int image_height;
     float aspect_ratio;
-    float angle;
     bool spin;
     bool flat;
+    bool wind_clockwise;
+    float scale;
+    glm::vec3 displacement;
+    glm::vec3 tait_bryan_angles;
     std::string obj_file;
     std::string lights_file;
     Args(int argc, char** argv);

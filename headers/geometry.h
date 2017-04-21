@@ -10,7 +10,7 @@
 
 #include "light.h"
 
-glm::mat4 modelview_matrix(const glm::mat4& model,float angle);
+glm::mat4 transformation_matrix(float scale, const glm::vec3 & displacement, const glm::vec3 & tait_bryan);
 
 glm::mat4 camera_matrix(const glm::mat4& modelview,float aspect_ratio,float &z_offset);
 

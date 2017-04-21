@@ -88,7 +88,7 @@ void bounding_box(uvec2& top_left, uvec2& bottom_right,
 void update_pixel(unsigned int raster_x, unsigned int raster_y,
     const array<vec3,3>& raster_vertices,
     vec3& normal, const array<vec3,3>& vertnormals, const vector<Light>& lights,
-    CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer, bool flat, float z_offset) {
+    CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer, bool flat, bool wind_clockwise, float z_offset) {
     //take pixel at point raster_x,raster_y in image plane
     //determine if it is inside traingle defined by vert0, vert1 and vert2 (each in raster coordinates)
     //if so, determine if it is nearer than the current depth buffer
@@ -101,9 +101,10 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
 
     //if smooth shading is enabled, update normal according to position in triangle
     if(not flat) {
-        normal = perspective_interpolate(vertnormals[0],vertnormals[1],vertnormals[2],
+        normal = glm::normalize(perspective_interpolate(vertnormals[0],vertnormals[1],vertnormals[2],
             depth,vec3(raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z),
-            z_offset,bary);
+            z_offset,bary));
+        if (wind_clockwise) {normal = -normal;}
     }
 
     //Is this pixel inside the triangle?
@@ -122,7 +123,7 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
 void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
     const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<Light>& lights,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
-    unsigned int image_width, unsigned int image_height, bool flat, float z_offset) {
+    unsigned int image_width, unsigned int image_height, bool flat, bool wind_clockwise, float z_offset) {
     //draw all the pixels from a triangle to the frame and depth buffers
     //face should contain three indices into raster_vertices
 
@@ -138,6 +139,7 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
     uvec2 top_left;
     uvec2 bottom_right;
     vec3 face_normal = glm::normalize(glm::cross(face_camera_vertices[1]-face_camera_vertices[0],face_camera_vertices[2]-face_camera_vertices[0]));
+    if (wind_clockwise) {face_normal = -face_normal;};
 
     if (face_normal.z > 0.f) { //backface culling
         bounding_box(top_left,bottom_right,
@@ -149,8 +151,10 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
             for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
                 update_pixel(raster_x,raster_y,
                     face_raster_vertices,
-                    face_normal, face_camera_vertnormals,
-                    lights, *frame_buffer,*depth_buffer, flat, z_offset);
+                    face_normal, face_camera_vertnormals, lights,
+                    *frame_buffer,*depth_buffer,
+                    flat, wind_clockwise,
+                    z_offset);
             }
         }
     }
@@ -170,16 +174,17 @@ void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& face
     vector<vec3> raster_vertices(num_vertices);
 
     //storage for vertex normals in camera space
-    vector<vec4> camera_vertnormals_homo(num_vertices);
     vector<vec3> camera_vertnormals(num_vertices);
 
     //quantity required for perspective-correct interpolation
     float z_offset;
 
     //calculate model-view matrix
-    mat4 model(1.0f); //later include per-model model matrix
+    mat4 model = transformation_matrix(arguments.scale,arguments.displacement,arguments.tait_bryan_angles);
 
-    mat4 modelview = modelview_matrix(model,arguments.angle);
+    mat4 view = transformation_matrix(1.f,vec3(0.f,0.f,-3.f),vec3(0.f));
+
+    mat4 modelview = view * model;
 
     //add perspective projection to model-view matrix
     mat4 camera = camera_matrix(modelview,arguments.aspect_ratio,z_offset);
@@ -191,7 +196,7 @@ void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& face
     //transform normals into camera space
     transform_normals(modelview,model_vertnormals,camera_vertnormals);
 
-    transform_lights(modelview,lights);
+    transform_lights(view,lights);
 
     //transform vertices into clip space using camera matrix
     transform_vertices(camera, model_vertices, clip_vertices);
@@ -207,6 +212,8 @@ void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& face
         draw_triangle(*face,raster_vertices,
             camera_vertices,camera_vertnormals,lights,
             frame_buffer,depth_buffer,
-            arguments.image_width,arguments.image_height,arguments.flat, z_offset);
+            arguments.image_width, arguments.image_height,
+            arguments.flat, arguments.wind_clockwise,
+            z_offset);
     }
 }

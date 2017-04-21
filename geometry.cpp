@@ -17,13 +17,9 @@ using glm::vec4;
 using glm::mat4;
 using namespace std::placeholders;
 
-mat4 modelview_matrix(const mat4& model,float angle) {
-    //transform model matrix as for a camera pointed at the origin in the xz plane, rotated by angle radians
-
-    mat4 modelview = glm::translate(model, vec3(0.f,0.f,-3.f));
-    modelview = glm::rotate(modelview,angle,vec3(0.f,1.f,0.f));
-
-    return modelview;
+mat4 transformation_matrix(float factor, const vec3 & displacement, const vec3 & tait_bryan) {
+    //create a matrix for scaling an object by factor relative to origin, rotating it by YXZ Tait-Bryan angles tait_bryan, and displacing it by displacement
+    return glm::translate(mat4(1.f),displacement) * glm::rotate(mat4(1.f),tait_bryan.y,vec3(0.f,1.f,0.f)) * glm::rotate(mat4(1.f),tait_bryan.x,vec3(1.f,0.f,0.f)) * glm::rotate(mat4(1.f),tait_bryan.z,vec3(0.f,0.f,1.f)) * glm::scale(mat4(1.f),vec3(factor));
 }
 
 mat4 camera_matrix(const mat4& modelview,float aspect_ratio, float & z_offset) {

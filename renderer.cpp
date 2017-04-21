@@ -106,7 +106,7 @@ int main(int argc,char** argv) {
             last_time = next_time;
 
             //rotate proportional to time elapsed
-            arguments.angle += time_step.count();
+            arguments.tait_bryan_angles.y += time_step.count();
         }
     }
     
