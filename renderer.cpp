@@ -21,23 +21,29 @@
 
 using std::vector;
 
+using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 using glm::uvec3;
 
 using cimg_library::CImg;
 
-void add_square(vector<vec3> &vertices, vector<Triangle> &faces,vector<vec3> &vertnormals) {
+void add_square(vector<vec3> &vertices, vector<Triangle> &faces,vector<vec3> &vertnormals,vector<vec2> &vertuvs) {
     //Load a very simple scene for testing
     vertices.push_back(vec3(-0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(0.5f,-0.5f,0.0f));
     vertices.push_back(vec3(-0.5f,0.5f,0.0f));
     vertices.push_back(vec3(0.5f,0.5f,0.0f));
 
+    vertnormals.push_back(vec3(0.f,0.f,1.f));
+
+    vertuvs.push_back(vec2(0.f,0.f));
+    vertuvs.push_back(vec2(1.f,0.f));
+    vertuvs.push_back(vec2(0.f,1.f));
+    vertuvs.push_back(vec2(1.f,1.f));
+
     faces.push_back(Triangle({0,1,2},{0,0,0},{0,1,2}));
     faces.push_back(Triangle({2,1,3},{0,0,0},{2,1,3}));
-
-    vertnormals.assign(4,vec3(0.f,0.f,1.f));
 }
 
 int main(int argc,char** argv) {
@@ -48,6 +54,9 @@ int main(int argc,char** argv) {
 
     //define storage for vertex normals
     vector<vec3> model_vertnormals;
+
+    //define storage for UV coordinates
+    vector<vec2> model_vertuvs;
 
     //define storage for faces (indices into vertices)
     vector<Triangle> faces;
@@ -60,10 +69,10 @@ int main(int argc,char** argv) {
 
     //load model to render
     if (arguments.obj_file!="null") {
-        load_obj(arguments.obj_file,model_vertices,faces,model_vertnormals);
+        load_obj(arguments.obj_file,model_vertices,faces,model_vertnormals, model_vertuvs);
     } else {
         //load a square if no model provided
-        add_square(model_vertices,faces,model_vertnormals);
+        add_square(model_vertices,faces,model_vertnormals,model_vertuvs);
     }
 
     //instantiate buffers for storing pixel data

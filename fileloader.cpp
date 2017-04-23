@@ -5,6 +5,7 @@
 #include <fstream>
 #include <array>
 
+#include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <text/csv/istream.hpp>
 
@@ -14,6 +15,7 @@
 #include "fileloader.h"
 #include "face.h"
 
+using glm::vec2;
 using glm::vec3;
 using glm::uvec3;
 using std::vector;
@@ -21,7 +23,7 @@ using std::array;
 
 using ::text::csv::csv_istream;
 
-void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals) {
+void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals, vector<vec2>& vertuvs) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
 
     tinyobj::attrib_t attrib;
@@ -56,6 +58,14 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
             vec3(attrib.normals[vert],
                 attrib.normals[vert+1],
                 attrib.normals[vert+2]
+            ));
+    }
+
+    //convert the uv coordinates into our format
+    for(size_t vert=0; vert < attrib.normals.size(); vert+=2) {
+        vertuvs.push_back(
+            vec2(attrib.normals[vert],
+                attrib.normals[vert+1]
             ));
     }
 
