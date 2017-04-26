@@ -8,7 +8,8 @@ struct Triangle {
 	std::array<int,3> vertices;
 	std::array<int,3> normals;
 	std::array<int,3> uvs;
-	Triangle(std::array<int,3> v, std::array<int,3> n, std::array<int,3> uv) : vertices(v), normals(n), uvs(uv) {};
+	int material;
+	Triangle(std::array<int,3> v, std::array<int,3> n, std::array<int,3> uv, int m) : vertices(v), normals(n), uvs(uv), material(m) {};
 };
 
 #endif

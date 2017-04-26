@@ -87,7 +87,7 @@ void bounding_box(uvec2& top_left, uvec2& bottom_right,
 
 void update_pixel(unsigned int raster_x, unsigned int raster_y,
     const array<vec3,3>& raster_vertices,
-    vec3& normal, const array<vec3,3>& vertnormals, const vector<Light>& lights,
+    vec3& normal, const array<vec3,3>& vertnormals, const array<vec2,3> vertuvs, const vector<Light>& lights,
     CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer, bool flat, bool wind_clockwise, float z_offset) {
     //take pixel at point raster_x,raster_y in image plane
     //determine if it is inside traingle defined by vert0, vert1 and vert2 (each in raster coordinates)
@@ -121,7 +121,7 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
 }
 
 void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
-    const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<Light>& lights,
+    const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<vec2>& vertuvs, const vector<Light>& lights,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height, bool flat, bool wind_clockwise, float z_offset) {
     //draw all the pixels from a triangle to the frame and depth buffers
@@ -130,9 +130,11 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
     array<vec3,3> face_raster_vertices;
     array<vec3,3> face_camera_vertices;
     array<vec3,3> face_camera_vertnormals;
+    array<vec2,3> face_vertuvs;
     for (size_t facevert = 0; facevert < 3; facevert++) {
         face_raster_vertices[facevert] = raster_vertices[face.vertices[facevert]];
         face_camera_vertices[facevert] = camera_vertices[face.vertices[facevert]];
+        face_vertuvs[facevert] = vertuvs[face.uvs[facevert]];
         if (not flat) {face_camera_vertnormals[facevert] = camera_vertnormals[face.normals[facevert]];}
     }
 
@@ -151,7 +153,7 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
             for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
                 update_pixel(raster_x,raster_y,
                     face_raster_vertices,
-                    face_normal, face_camera_vertnormals, lights,
+                    face_normal, face_camera_vertnormals, face_vertuvs, lights,
                     *frame_buffer,*depth_buffer,
                     flat, wind_clockwise,
                     z_offset);
@@ -161,7 +163,7 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
 }
 
 void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& faces,
-    const vector<vec3>&model_vertnormals, vector<Light>& lights, const Args& arguments,
+    const vector<vec3>&model_vertnormals, const vector<vec2>&vertuvs, vector<Light>& lights, const Args& arguments,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer) {
     //transform the model vertices and draw a frame to the frame buffer
 
@@ -210,7 +212,7 @@ void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& face
     //for each face in faces, draw it to the frame and depth buffers
     for (auto face = faces.begin(); face < faces.end(); ++face) {
         draw_triangle(*face,raster_vertices,
-            camera_vertices,camera_vertnormals,lights,
+            camera_vertices,camera_vertnormals,vertuvs,lights,
             frame_buffer,depth_buffer,
             arguments.image_width, arguments.image_height,
             arguments.flat, arguments.wind_clockwise,

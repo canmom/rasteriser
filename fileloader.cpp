@@ -10,10 +10,14 @@
 #include <text/csv/istream.hpp>
 
 #include "tiny_obj_loader.h"
+#include "CImg.h"
 
 #include "light.h"
 #include "fileloader.h"
 #include "face.h"
+#include "material.h"
+
+using cimg_library::CImg;
 
 using glm::vec2;
 using glm::vec3;
@@ -23,17 +27,17 @@ using std::array;
 
 using ::text::csv::csv_istream;
 
-void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals, vector<vec2>& vertuvs) {
+void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals, vector<vec2>& vertuvs, vector<Material>& materials) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and faces as uvec3 of indices
 
     tinyobj::attrib_t attrib;
     vector<tinyobj::shape_t> shapes;
-    vector<tinyobj::material_t> materials; //necessary for function call, but will be discarded
+    vector<tinyobj::material_t> objmaterials;
     std::string err;
 
     //load all data in Obj file
     //'triangulate' option defaults to 'true' so all faces should be triangles
-    bool success = tinyobj::LoadObj(&attrib, &shapes, &materials, &err, file.c_str());
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &objmaterials, &err, file.c_str());
 
     //boilerplate error handling
     if (!err.empty()) {
@@ -73,12 +77,14 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
     //faces should all be triangles due to triangulate=true
     for(size_t shape = 0; shape < shapes.size(); shape++) {
         vector<tinyobj::index_t> indices = shapes[shape].mesh.indices;
+        vector<int> mat_ids = shapes[shape].mesh.material_ids;
         for(size_t face = 0; face < indices.size()-2; face+=3) {
             triangles.push_back(
                 Triangle(
                     {indices[face].vertex_index, indices[face+1].vertex_index, indices[face+2].vertex_index},
                     {indices[face].normal_index, indices[face+1].normal_index, indices[face+2].normal_index},
-                    {indices[face].texcoord_index, indices[face+1].texcoord_index, indices[face+2].texcoord_index}
+                    {indices[face].texcoord_index, indices[face+1].texcoord_index, indices[face+2].texcoord_index},
+                    mat_ids[face]
                     ));
         }
     }

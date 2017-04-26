@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(headers vendor/cimg vendor/tinyobjloader vendor/fastcppcsvparser)
 
+add_library(material material.cpp)
 add_library(geometry geometry.cpp)
 add_library(shading shading.cpp)
 add_library(drawing drawing.cpp)
