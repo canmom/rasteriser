@@ -116,6 +116,7 @@ void xyz_all(const std::vector<glm::vec4>& homo_vertices, std::vector<glm::vec3>
 }
 
 void Light::transform(const mat4& transformation) {
+    //set the trans_dir member of a Light to the world-space direction multiplied by the matrix transformation
     trans_dir = glm::normalize(transform_direction(transformation,direction));
 }
 

@@ -10,6 +10,7 @@
 #include <text/csv/istream.hpp>
 
 #include "tiny_obj_loader.h"
+#define cimg_use_png
 #include "CImg.h"
 
 #include "light.h"
@@ -71,6 +72,16 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
             vec2(attrib.normals[vert],
                 attrib.normals[vert+1]
             ));
+    }
+
+    //extract the relevant material properties; will throw exception if material can't open a texture
+    for(auto mat = objmaterials.begin(); mat < objmaterials.end(); ++mat) {
+        vec3 diffuse_colour((*mat).diffuse[0],(*mat).diffuse[1],(*mat).diffuse[2]);
+        if ((*mat).diffuse_texname.empty()) {
+            materials.push_back(Material(diffuse_colour));
+        } else {
+            materials.push_back(Material(diffuse_colour,(*mat).diffuse_texname));
+        }
     }
 
     //convert the faces into our format

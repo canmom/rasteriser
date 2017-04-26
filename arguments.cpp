@@ -12,7 +12,7 @@ Args::Args(int argc, char** argv) {
         TCLAP::CmdLine cmd("Render a model by rasterisation.", ' ');
 
         //file input
-        TCLAP::ValueArg<std::string> objArg("o","obj","path to Wavefront .obj file containing model to render",false,"null","model.obj",cmd);
+        TCLAP::ValueArg<std::string> objArg("o","obj","path to Wavefront .obj file containing model to render",false,"","model.obj",cmd);
         TCLAP::ValueArg<std::string> lightsArg("l","lights","path to CSV file containing directional lights in format direction_x,dir_y,dir_z,intensity,red,green,blue",true,"","lights.csv",cmd);
 
         //output parameters

@@ -1,12 +1,13 @@
 #include <vector>
 #include <array>
+#include <algorithm>
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/mat4x4.hpp>
 
 #include <glm/gtx/extented_min_max.hpp>
-
+#define cimg_use_png
 #include "CImg.h"
 
 #include "swizzle.h"
@@ -16,6 +17,7 @@
 #include "drawing.h"
 #include "arguments.h"
 #include "face.h"
+#include "material.h"
 
 using std::vector;
 using std::array;
@@ -34,36 +36,34 @@ float edge(const vec2& point, const vec3& vert1, const vec3& vert2) {
     return (vert2.x-vert1.x)*(point.y-vert1.y) - (vert2.y - vert1.y) * (point.x - vert1.x);
 }
 
-vec3 barycentric(const vec2& point, const vec3& vert0, const vec3& vert1, const vec3& vert2) {
+array<float,3> barycentric(const vec2& point, const vec3& vert0, const vec3& vert1, const vec3& vert2) {
     //return 3D vector containing XY plane barycentric coordinates of point with respect to vert0, vert1, and vert2
     //barycentric coordinates are used for linear interpolation of quantities in screen space
     //if all barycentric coordinates are positive, a point lies inside the screen space triangle defined by vert0, vert1 and vert2
 
     float area = edge(xy(vert2), vert0, vert1);
-    vec3 bary(0.0f);
 
-    bary.x = edge(point,vert1,vert2)/area;
-    bary.y = edge(point,vert2,vert0)/area;
-    bary.z = edge(point,vert0,vert1)/area;
-
-    return bary;
+    return {edge(point,vert1,vert2)/area, edge(point,vert2,vert0)/area, edge(point,vert0,vert1)/area};
 }
 
 template <typename T>
-inline T interpolate(T v0, T v1, T v2, const vec3& bary) {
+inline T interpolate(const array<T,3> & vert_values, const array<float,3>& bary) {
     //linearly interpolate or extrapolate a quantity v defined on three vertices in screen space
     //bary should contain barycentric coordinates with respect to the three vertices
-    return bary.x * v0 + bary.y * v1 + bary.z * v2;
+    return vert_values[0] * bary[0] + vert_values[1] * bary[1] + vert_values[2] * bary[2];
 }
 
 template <typename T>
-inline T perspective_interpolate(T v0, T v1, T v2, float depth, const vec3& vert_depth, float offset, const vec3& bary) {
+inline T perspective_interpolate(const array<T,3> & vert_values, float depth, const array<float,3> & vert_depth, float offset, const array<float,3>& bary) {
     //perspective-correct linearly interpolate or extrapolate a quantity v defined on three vertices in screen space
     //depth is the NDC depth of the target point
     //vert_depth should contain the NDC depths of the three vertices
     //offset should contain a correction equal to M_33 where M is the perspective projection matrix
     //bary should contain barycentric coordinates with respect to the three vertices
-    return depth * (bary.x*vert_depth.x*v0 + bary.y*vert_depth.y*v1 + bary.z*vert_depth.z*v2 - offset * interpolate(v0,v1,v2,bary));
+    
+    return depth * (bary[0] * (vert_depth[0] - offset) * vert_values[0] +
+        bary[1] * (vert_depth[1] - offset) * vert_values[1] +
+        bary[2] * (vert_depth[2] - offset) * vert_values[2]);
 }
 
 void bounding_box(uvec2& top_left, uvec2& bottom_right,
@@ -87,32 +87,37 @@ void bounding_box(uvec2& top_left, uvec2& bottom_right,
 
 void update_pixel(unsigned int raster_x, unsigned int raster_y,
     const array<vec3,3>& raster_vertices,
-    vec3& normal, const array<vec3,3>& vertnormals, const array<vec2,3> vertuvs, const vector<Light>& lights,
+    vec3& normal, const array<vec3,3>& vertnormals, const array<vec2,3>& vertuvs, const vector<Light>& lights, const Material& material,
     CImg<unsigned char>& frame_buffer, CImg<float>& depth_buffer, bool flat, bool wind_clockwise, float z_offset) {
     //take pixel at point raster_x,raster_y in image plane
     //determine if it is inside traingle defined by vert0, vert1 and vert2 (each in raster coordinates)
     //if so, determine if it is nearer than the current depth buffer
     //if so, update depth buffer and shade pixel
 
-    vec3 bary = barycentric(vec2(raster_x,raster_y),raster_vertices[0],raster_vertices[1],raster_vertices[2]);
+    array<float,3> bary = barycentric(vec2(raster_x,raster_y),raster_vertices[0],raster_vertices[1],raster_vertices[2]);
+
+    array<float,3> vertdepths = {raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z};
 
     //determine the Normalised Device Coordinate depth value
-    float depth = interpolate(raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z,bary);
+    float depth = interpolate(vertdepths,bary);
+
 
     //if smooth shading is enabled, update normal according to position in triangle
     if(not flat) {
-        normal = glm::normalize(perspective_interpolate(vertnormals[0],vertnormals[1],vertnormals[2],
-            depth,vec3(raster_vertices[0].z,raster_vertices[1].z,raster_vertices[2].z),
-            z_offset,bary));
+        normal = glm::normalize(perspective_interpolate(vertnormals, depth, vertdepths, z_offset, bary));
         if (wind_clockwise) {normal = -normal;}
     }
 
+    vec2 uv = perspective_interpolate(vertuvs, depth, vertdepths, z_offset, bary);
+
     //Is this pixel inside the triangle?
-    if (glm::all(glm::greaterThanEqual(bary,vec3(0.f)))) {
+    if (std::all_of(bary.begin(),bary.end(),[](float b){return b >= 0.f;})) {
         //Is this pixel nearer than the current value in the depth buffer?
         if(depth < depth_buffer(raster_x,raster_y)) {
+            //update the depth buffer
             depth_buffer(raster_x,raster_y,0,0) = depth;
-            uvec3 pixel = shade(normal,vec3(1.f),lights);
+            //shade the pixel and write to the frame buffer
+            uvec3 pixel = shade(normal,material.sample(uv),lights);
             frame_buffer(raster_x,raster_y,0,0) = (unsigned char)pixel.r;
             frame_buffer(raster_x,raster_y,0,1) = (unsigned char)pixel.g;
             frame_buffer(raster_x,raster_y,0,2) = (unsigned char)pixel.b;
@@ -121,7 +126,7 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
 }
 
 void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
-    const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<vec2>& vertuvs, const vector<Light>& lights,
+    const vector<vec3>& camera_vertices, const vector<vec3>& camera_vertnormals, const vector<vec2>& vertuvs, const vector<Light>& lights, const vector<Material>& materials,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer,
     unsigned int image_width, unsigned int image_height, bool flat, bool wind_clockwise, float z_offset) {
     //draw all the pixels from a triangle to the frame and depth buffers
@@ -138,6 +143,8 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
         if (not flat) {face_camera_vertnormals[facevert] = camera_vertnormals[face.normals[facevert]];}
     }
 
+    const Material& face_material = materials[face.material];
+
     uvec2 top_left;
     uvec2 bottom_right;
     vec3 face_normal = glm::normalize(glm::cross(face_camera_vertices[1]-face_camera_vertices[0],face_camera_vertices[2]-face_camera_vertices[0]));
@@ -153,7 +160,7 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
             for(unsigned int raster_x = top_left.x; raster_x <= bottom_right.x; raster_x++) {
                 update_pixel(raster_x,raster_y,
                     face_raster_vertices,
-                    face_normal, face_camera_vertnormals, face_vertuvs, lights,
+                    face_normal, face_camera_vertnormals, face_vertuvs, lights, face_material,
                     *frame_buffer,*depth_buffer,
                     flat, wind_clockwise,
                     z_offset);
@@ -163,7 +170,7 @@ void draw_triangle(const Triangle& face, const vector<vec3>& raster_vertices,
 }
 
 void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& faces,
-    const vector<vec3>&model_vertnormals, const vector<vec2>&vertuvs, vector<Light>& lights, const Args& arguments,
+    const vector<vec3>&model_vertnormals, const vector<vec2>&vertuvs, vector<Light>& lights, const vector<Material>& materials, const Args& arguments,
     CImg<unsigned char>* frame_buffer, CImg<float>* depth_buffer) {
     //transform the model vertices and draw a frame to the frame buffer
 
@@ -212,7 +219,7 @@ void draw_frame(const vector<vec3>& model_vertices, const vector<Triangle>& face
     //for each face in faces, draw it to the frame and depth buffers
     for (auto face = faces.begin(); face < faces.end(); ++face) {
         draw_triangle(*face,raster_vertices,
-            camera_vertices,camera_vertnormals,vertuvs,lights,
+            camera_vertices,camera_vertnormals,vertuvs,lights,materials,
             frame_buffer,depth_buffer,
             arguments.image_width, arguments.image_height,
             arguments.flat, arguments.wind_clockwise,

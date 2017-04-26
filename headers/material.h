@@ -20,7 +20,7 @@ public:
 	Material(const glm::vec3 & dc, const std::string & dtf) : diffuse_colour(dc), has_texture(true), diffuse_texture_file(dtf), diffuse_texture(diffuse_texture_file.c_str()) {
 		diffuse_texture.normalize(0.f,1.f);
 	}
-	glm::vec3 sample(const glm::vec2 & uv);
+	glm::vec3 sample(const glm::vec2 & uv) const;
 };
 
 #endif

@@ -9,6 +9,7 @@
 #include <glm/vec4.hpp>
 
 //libraries in local vendor folder
+#define cimg_use_png
 #include "CImg.h"
 
 //project headers
@@ -74,7 +75,7 @@ int main(int argc,char** argv) {
     load_lights(arguments.lights_file,lights);
 
     //load model to render
-    if (arguments.obj_file!="null") {
+    if (not arguments.obj_file.empty()) {
         load_obj(arguments.obj_file,model_vertices,faces,model_vertnormals, vertuvs, materials);
     } else {
         //load a square if no model provided
@@ -86,7 +87,7 @@ int main(int argc,char** argv) {
     CImg<float> depth_buffer(arguments.image_width,arguments.image_height,1,1,1.f);
 
     if (not arguments.spin) {
-        draw_frame(model_vertices, faces, model_vertnormals, vertuvs, lights, arguments, &frame_buffer, &depth_buffer);
+        draw_frame(model_vertices, faces, model_vertnormals, vertuvs, lights, materials, arguments, &frame_buffer, &depth_buffer);
 
         //output frame and depth buffers
         frame_buffer.save("frame.png");
@@ -108,7 +109,7 @@ int main(int argc,char** argv) {
             depth_buffer.fill(1.f);
 
             //render
-            draw_frame(model_vertices, faces, model_vertnormals, vertuvs, lights, arguments, &frame_buffer, &depth_buffer);
+            draw_frame(model_vertices, faces, model_vertnormals, vertuvs, lights, materials, arguments, &frame_buffer, &depth_buffer);
 
             //display the frame rate
             frame_buffer.draw_text(5,5,frame_rate.c_str(),white,black);
