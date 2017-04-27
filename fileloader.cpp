@@ -89,12 +89,13 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
     for(size_t shape = 0; shape < shapes.size(); shape++) {
         vector<tinyobj::index_t> indices = shapes[shape].mesh.indices;
         vector<int> mat_ids = shapes[shape].mesh.material_ids;
-        for(size_t face = 0; face < indices.size()-2; face+=3) {
+        std::cout << "Loading " << mat_ids.size() << " triangles." << std::endl;
+        for(size_t face = 0; face < mat_ids.size(); face++) {
             triangles.push_back(
                 Triangle(
-                    {indices[face].vertex_index, indices[face+1].vertex_index, indices[face+2].vertex_index},
-                    {indices[face].normal_index, indices[face+1].normal_index, indices[face+2].normal_index},
-                    {indices[face].texcoord_index, indices[face+1].texcoord_index, indices[face+2].texcoord_index},
+                    {indices[3*face].vertex_index, indices[3*face+1].vertex_index, indices[3*face+2].vertex_index},
+                    {indices[3*face].normal_index, indices[3*face+1].normal_index, indices[3*face+2].normal_index},
+                    {indices[3*face].texcoord_index, indices[3*face+1].texcoord_index, indices[3*face+2].texcoord_index},
                     mat_ids[face]
                     ));
         }
