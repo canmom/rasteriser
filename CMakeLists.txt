@@ -9,6 +9,7 @@ include_directories(${PNG_INCLUDE_DIR})
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -g")
 
 include_directories(headers vendor/cimg vendor/tinyobjloader vendor/fastcppcsvparser)
 
@@ -17,5 +18,5 @@ target_link_libraries(renderer ${CONAN_LIBS} ${PNG_LIBRARY})
 
 if(UNIX AND NOT APPLE)
 	#if building under linux
-	target_link_libraries(renderer -lx11 -lpthread)
+	target_link_libraries(renderer -lX11 -lpthread)
 endif()
