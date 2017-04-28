@@ -9,7 +9,6 @@
 #include <glm/vec4.hpp>
 
 //libraries in local vendor folder
-#define cimg_use_png
 #include "CImg.h"
 
 //project headers

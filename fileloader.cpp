@@ -10,7 +10,6 @@
 #include <text/csv/istream.hpp>
 
 #include "tiny_obj_loader.h"
-#define cimg_use_png
 #include "CImg.h"
 
 #include "light.h"

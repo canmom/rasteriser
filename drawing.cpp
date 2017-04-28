@@ -7,7 +7,6 @@
 #include <glm/mat4x4.hpp>
 
 #include <glm/gtx/extented_min_max.hpp>
-#define cimg_use_png
 #include "CImg.h"
 
 #include "swizzle.h"
