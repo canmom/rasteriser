@@ -18,6 +18,7 @@ private:
 public:
 	Material(const glm::vec3 & dc) : diffuse_colour(dc), has_texture(false) {}
 	Material(const glm::vec3 & dc, const std::string & dtf) : diffuse_colour(dc), has_texture(true), diffuse_texture_file(dtf), diffuse_texture(diffuse_texture_file.c_str()) {
+		std::cout << "Loaded texture " << diffuse_texture_file << "." << std::endl;
 		diffuse_texture.normalize(0.f,1.f);
 	}
 	glm::vec3 sample(const glm::vec2 & uv) const;
