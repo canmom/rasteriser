@@ -64,7 +64,7 @@ inline vec3 interpolation_coords(const vec3 & inverse_depths, const vec3& bary) 
 template <typename T>
 inline T perspective_interpolate(const array<T,3> & vert_values, float inversedepth, const vec3 & interpolation_coords) {
     //perspective-correct linearly interpolate or extrapolate a quantity v defined on three vertices in screen space
-    //the interpolation coordinates are 
+    //the interpolation coordinates are the products of inverse camera space depths and barycentric coordinates
     //the depth should be the sum of the interpolation coordinates
     //bary should contain barycentric coordinates with respect to the three vertices
     
@@ -169,16 +169,18 @@ void draw_triangle(const Triangle& face, const vector<vec4>& raster_vertices,
     }
     const Material& face_material = materials[face.material];
 
-    //define storage
-    uvec2 top_left;
-    uvec2 bottom_right;
-
     //use signed area to determine whether the face is a front or back face
     float face_raster_signedarea = signed_area_2d(face_raster_vertices);
     //if wind_clockwise is set, a negative value is a front face, otherwise a positive value is
     bool front_face = (face_raster_signedarea > 0) xor wind_clockwise;
 
     if (front_face) { //backface culling
+
+        //determine the corners of the bounding box for this face
+        //define storage for the bounding box corners
+        uvec2 top_left;
+        uvec2 bottom_right;
+        
         bounding_box(top_left,bottom_right,
             face_raster_vertices,image_width,image_height);
 
