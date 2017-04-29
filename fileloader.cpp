@@ -66,10 +66,10 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
     }
 
     //convert the uv coordinates into our format
-    for(size_t vert=0; vert < attrib.normals.size(); vert+=2) {
+    for(size_t vert=0; vert < attrib.texcoords.size(); vert+=2) {
         vertuvs.push_back(
-            vec2(attrib.normals[vert],
-                attrib.normals[vert+1]
+            vec2(attrib.texcoords[vert],
+                attrib.texcoords[vert+1]
             ));
     }
 
