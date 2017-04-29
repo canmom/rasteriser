@@ -62,16 +62,16 @@ inline vec3 interpolation_coords(const vec3 & inverse_depths, const vec3& bary) 
 }
 
 template <typename T>
-inline T perspective_interpolate(const array<T,3> & vert_values, float inversedepth, const vec3 & interpolation_coords) {
+inline T perspective_interpolate(const array<T,3> & vert_values, float depth, const vec3 & interpolation_coords) {
     //perspective-correct linearly interpolate or extrapolate a quantity v defined on three vertices in screen space
     //the interpolation coordinates are the products of inverse camera space depths and barycentric coordinates
-    //the depth should be the sum of the interpolation coordinates
+    //the depth should be the inverse of the sum of the interpolation coordinates
     //bary should contain barycentric coordinates with respect to the three vertices
     
-    return (interpolation_coords[0] * vert_values[0] +
+    return depth * (
+        interpolation_coords[0] * vert_values[0] +
         interpolation_coords[1] * vert_values[1] +
-        interpolation_coords[2] * vert_values[2])
-        /inversedepth;
+        interpolation_coords[2] * vert_values[2]);
 }
 
 void bounding_box(uvec2& top_left, uvec2& bottom_right,
@@ -124,15 +124,15 @@ void update_pixel(unsigned int raster_x, unsigned int raster_y,
             //determine the perspective-correct interpolation coordinates (barycentric divided coordinates by camera space depth of that pixel)
             vec3 inter = interpolation_coords(vec3(raster_vertices[0].w,raster_vertices[1].w,raster_vertices[2].w),bary);
 
-            //determine the inverse camera-space depth of the point:
-            float inversedepth = inter[0]+inter[1]+inter[2];
+            //determine the camera-space depth of the point:
+            float depth = 1.f/(inter[0]+inter[1]+inter[2]);
 
             //interpolate vertex normals
-            vec3 normal = glm::normalize(perspective_interpolate(vertnormals, inversedepth, inter));
+            vec3 normal = glm::normalize(perspective_interpolate(vertnormals, depth, inter));
             if (wind_clockwise) {normal = -normal;}
 
             //interpolate uv coordinates
-            vec2 uv = perspective_interpolate(vertuvs, inversedepth, inter);
+            vec2 uv = perspective_interpolate(vertuvs, depth, inter);
 
             //work out what colour this pixel should be (in OpenGL terms, run the fragment shader)
             uvec3 pixel = shade(
@@ -164,7 +164,10 @@ void draw_triangle(const Triangle& face, const vector<vec4>& raster_vertices,
     //de-index the vertex data associated with this face
     for (size_t facevert = 0; facevert < 3; facevert++) {
         face_raster_vertices[facevert] = raster_vertices[face.vertices[facevert]];
-        face_vertuvs[facevert] = vertuvs[face.uvs[facevert]];
+        //check if uv coordinates exist
+        if (face.uvs[facevert] >= 0) {
+            face_vertuvs[facevert] = vertuvs[face.uvs[facevert]];
+        }
         face_camera_vertnormals[facevert] = camera_vertnormals[face.normals[facevert]];
     }
     const Material& face_material = materials[face.material];
@@ -180,7 +183,7 @@ void draw_triangle(const Triangle& face, const vector<vec4>& raster_vertices,
         //define storage for the bounding box corners
         uvec2 top_left;
         uvec2 bottom_right;
-        
+
         bounding_box(top_left,bottom_right,
             face_raster_vertices,image_width,image_height);
 
