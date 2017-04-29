@@ -13,6 +13,12 @@ inline glm::vec2 xy(const glm::vec3& v) {
     return glm::vec2(v.x,v.y);
 }
 
+inline glm::vec2 xy(const glm::vec4& v) {
+	//return 2D vector containing the first two components of v
+
+	return glm::vec2(v.x,v.y);
+}
+
 inline glm::vec3 xyz(const glm::vec4& v) {
 	//return 3D vector containing the first three comments of v
 

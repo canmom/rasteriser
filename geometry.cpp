@@ -1,4 +1,5 @@
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <functional>
 
@@ -12,6 +13,7 @@
 #include "swizzle.h"
 
 using std::vector;
+using std::array;
 using glm::vec3;
 using glm::vec4;
 using glm::mat4;
@@ -22,12 +24,10 @@ mat4 transformation_matrix(float factor, const vec3 & displacement, const vec3 &
     return glm::translate(mat4(1.f),displacement) * glm::rotate(mat4(1.f),tait_bryan.y,vec3(0.f,1.f,0.f)) * glm::rotate(mat4(1.f),tait_bryan.x,vec3(1.f,0.f,0.f)) * glm::rotate(mat4(1.f),tait_bryan.z,vec3(0.f,0.f,1.f)) * glm::scale(mat4(1.f),vec3(factor));
 }
 
-mat4 camera_matrix(const mat4& modelview,float aspect_ratio, float & z_offset) {
+mat4 camera_matrix(const mat4& modelview,float aspect_ratio) {
     //premultiply a transformation matrix by a perspective projection matrix to make a camera matrix
     
     mat4 perspective = glm::perspective(glm::radians(45.0f),aspect_ratio,0.1f,6.f);
-
-    z_offset = perspective[3][3];
 
     return perspective * modelview;
 }
@@ -49,12 +49,13 @@ vec4 transform_point(const mat4& transformation, const vec3& point) {
     return transformation * homo_point;
 }
 
-vec3 z_divide(const vec4& clip_vertex) {
+vec4 z_divide(const vec4& clip_vertex) {
     //take 4D vector clip_vertex in homogeneous coordinates and return equivalent 3D vector
-    return vec3(
+    return vec4(
         clip_vertex.x/clip_vertex.w,
         clip_vertex.y/clip_vertex.w,
-        clip_vertex.z/clip_vertex.w
+        clip_vertex.z/clip_vertex.w,
+        1.f/clip_vertex.w
     );
 }
 
@@ -63,17 +64,22 @@ float remap_ndc(float value, float high) {
     return 0.5f*(value + 1.0f)*high;
 }
 
-vec3 ndc_to_raster(int width,int height,const vec3& ndc_vertex) {
+vec4 ndc_to_raster(int width,int height,const vec4& ndc_vertex) {
     //return vertex with X and Y coordinates scaled from Normalised Device Coordinates to an image plane with given width and height
-    return vec3(
+    return vec4(
         remap_ndc(ndc_vertex.x,width),
         remap_ndc(-ndc_vertex.y,height),
-        ndc_vertex.z);
+        ndc_vertex.z,
+        ndc_vertex.w);
 }
 
-vec3 face_normal(vec3 vert0, vec3 vert1, vec3 vert2) {
-    //return non-normalised (area-proportional) face normal of face defined by these three vertices
-    return glm::cross(vert1-vert0,vert2-vert0);
+float signed_area_2d(const array<vec4,3>& v) {
+    //calculate the signed area of a triangle in the xy plane
+    //the arguments are vec4 not vec2 for convenience, but only xy coordinates are relevant 
+    return -0.5f*(
+        v[0].x * v[1].y - v[1].x * v[0].y +
+        v[1].x * v[2].y - v[2].x * v[1].y +
+        v[2].x * v[0].y - v[0].x * v[2].y);
 }
 
 void transform_vertices(const mat4& transformation, const vector<vec3>& vertices, vector<vec4>& result) {
@@ -101,7 +107,7 @@ void transform_normals(const mat4& transformation, const vector<vec3>& vertices,
     std::transform(vertices.begin(),vertices.end(),result.begin(),td);
 }
 
-void z_divide_all(const vector<vec4>& clip_vertices, vector<vec3>& ndc_vertices) {
+void z_divide_all(const vector<vec4>& clip_vertices, vector<vec4>& ndc_vertices) {
     //apply z_devide to all vertices in clip_vertices, and store result in ndc_vertices
 
     ndc_vertices.resize(clip_vertices.size());
@@ -126,7 +132,7 @@ void transform_lights(const mat4& transformation, vector<Light>& lights) {
     }
 }
 
-void ndc_to_raster_all(int width, int height, const vector<vec3>& ndc_vertices, vector<vec3> & raster_vertices) {
+void ndc_to_raster_all(int width, int height, const vector<vec4>& ndc_vertices, vector<vec4> & raster_vertices) {
     //rescale all vertices in ndc_vertices to image plane with given width and height, and store results in raster_vertices
     raster_vertices.resize(ndc_vertices.size());
 
