@@ -12,8 +12,9 @@
 #include "light.h"
 #include "face.h"
 #include "material.h"
+#include "arguments.h"
 
-void load_obj(std::string file, std::vector<glm::vec3> &vertices, std::vector<Triangle> &triangles, std::vector<glm::vec3> & vertnormals, std::vector<glm::vec2>& vertuvs, std::vector<Material>& materials);
+void load_obj(const Args & arguments, std::vector<glm::vec3> &vertices, std::vector<Triangle> &triangles, std::vector<glm::vec3> & vertnormals, std::vector<glm::vec2>& vertuvs, std::vector<Material>& materials);
 
 void load_lights(std::string file, std::vector<Light> &lights);
 

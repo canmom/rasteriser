@@ -16,6 +16,7 @@ struct Args {
     glm::vec3 tait_bryan_angles;
     std::string obj_file;
     std::string lights_file;
+    std::string materials_directory;
     Args(int argc, char** argv);
 };
 

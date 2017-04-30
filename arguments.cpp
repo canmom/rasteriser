@@ -14,6 +14,7 @@ Args::Args(int argc, char** argv) {
         //file input
         TCLAP::ValueArg<std::string> objArg("o","obj","path to Wavefront .obj file containing model to render",false,"","model.obj",cmd);
         TCLAP::ValueArg<std::string> lightsArg("l","lights","path to CSV file containing directional lights in format direction_x,dir_y,dir_z,intensity,red,green,blue",true,"","lights.csv",cmd);
+        TCLAP::ValueArg<std::string> materialsDirArg("","mats-dir","folder containing .mtl files associated with model loaded, defaults to working directory",false,"","path/",cmd);
 
         //output parameters
         TCLAP::ValueArg<unsigned int> widthArg("x","width","Width of output in pixels",false,540u,"pixels",cmd);
@@ -26,7 +27,7 @@ Args::Args(int argc, char** argv) {
         TCLAP::ValueArg<float> rotxArg("","rx","Rotate by angle around x axis (composed as YXZ Tait-Bryan angles).",false,0.f,"radians",cmd);
         TCLAP::ValueArg<float> rotyArg("","ry","Rotate by angle around y axis (composed as YXZ Tait-Bryan angles).",false,0.f,"radians",cmd);
         TCLAP::ValueArg<float> rotzArg("","rz","Rotate by angle around z axis (composed as YXZ Tait-Bryan angles).",false,0.f,"radians",cmd);
-        TCLAP::ValueArg<float> scaleArg("m","scale","Scale the model by given factor",false,1.f,"factor",cmd);
+        TCLAP::ValueArg<float> scaleArg("","scale","Scale the model by given factor",false,1.f,"factor",cmd);
         TCLAP::ValueArg<float> dispxArg("","dx","Displace model in x direction",false,0.f,"distance",cmd);
         TCLAP::ValueArg<float> dispyArg("","dy","Displace model in y direction",false,0.f,"distance",cmd);
         TCLAP::ValueArg<float> dispzArg("","dz","Displace model in z direction",false,0.f,"distance",cmd);
@@ -39,6 +40,7 @@ Args::Args(int argc, char** argv) {
         tait_bryan_angles = vec3(rotxArg.getValue(),rotyArg.getValue(),rotzArg.getValue());
         lights_file = lightsArg.getValue();
         obj_file = objArg.getValue();
+        materials_directory = materialsDirArg.getValue();
         spin = spinArg.getValue();
         flat = flatArg.getValue();
         wind_clockwise = windingArg.getValue();

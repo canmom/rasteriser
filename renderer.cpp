@@ -75,7 +75,7 @@ int main(int argc,char** argv) {
 
     //load model to render
     if (not arguments.obj_file.empty()) {
-        load_obj(arguments.obj_file,model_vertices,faces,model_vertnormals, vertuvs, materials);
+        load_obj(arguments,model_vertices,faces,model_vertnormals, vertuvs, materials);
     } else {
         //load a square if no model provided
         add_square(model_vertices,faces,model_vertnormals,vertuvs, materials);

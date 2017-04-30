@@ -14,6 +14,7 @@
 #include "fileloader.h"
 #include "face.h"
 #include "material.h"
+#include "arguments.h"
 
 using glm::vec2;
 using glm::vec3;
@@ -43,7 +44,7 @@ void components_to_vec3s(const vector<float> components, vector<vec3>& vecs) {
     }
 }
 
-void load_materials(const vector<tinyobj::material_t> & objmaterials, vector<Material> & materials) {
+void load_materials(const vector<tinyobj::material_t> & objmaterials, const std::string & tex_dir, vector<Material> & materials) {
     //extract the relevant material properties from the material_t format used by tinyobjloader
     //if a texture is defined, use the constructor that loads a texture
     for(auto mat = objmaterials.begin(); mat < objmaterials.end(); ++mat) {
@@ -51,7 +52,7 @@ void load_materials(const vector<tinyobj::material_t> & objmaterials, vector<Mat
         if ((*mat).diffuse_texname.empty()) {
             materials.push_back(Material(diffuse_colour));
         } else {
-            materials.push_back(Material(diffuse_colour,(*mat).diffuse_texname));
+            materials.push_back(Material(diffuse_colour,tex_dir+(*mat).diffuse_texname));
         }
     }
 }
@@ -75,7 +76,7 @@ void load_triangles(const tinyobj::shape_t & shape, vector<Triangle> & triangles
     }
 }
 
-void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals, vector<vec2>& vertuvs, vector<Material>& materials) {
+void load_obj(const Args & args, vector<vec3> &vertices, vector<Triangle> &triangles, vector<vec3> & vertnormals, vector<vec2>& vertuvs, vector<Material>& materials) {
     //load a Wavefront .obj file at 'file' and store vertex coordinates as vec3 and face_inds as uvec3 of indices
 
     tinyobj::attrib_t attrib;
@@ -84,8 +85,11 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
     std::string err;
 
     //load all data in Obj file
-    //'triangulate' option defaults to 'true' so all face_inds should be triangles
-    bool success = tinyobj::LoadObj(&attrib, &shapes, &objmaterials, &err, file.c_str());
+    //'triangulate'
+    bool success = tinyobj::LoadObj(&attrib, &shapes, &objmaterials, &err,
+        args.obj_file.c_str(), //model to load
+        args.materials_directory.c_str(), //directory to search for materials
+        true); //enable triangulation
 
     //boilerplate error handling
     if (!err.empty()) {
@@ -105,7 +109,7 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
     components_to_vec2s(attrib.texcoords, vertuvs);
 
     //conver materials and load textures
-    load_materials(objmaterials, materials);
+    load_materials(objmaterials, args.materials_directory, materials);
 
     //convert the face_inds into our format
     //face_inds should all be triangles due to triangulate=true
@@ -113,7 +117,7 @@ void load_obj(std::string file, vector<vec3> &vertices, vector<Triangle> &triang
         load_triangles(*shape, triangles);
     }
 
-    std::cout << "Loaded model " << file << "." << std::endl;
+    std::cout << "Loaded model " << args.obj_file << "." << std::endl;
 }
 
 void load_lights(std::string file, vector<Light> &lights) {
